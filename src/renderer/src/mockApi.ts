@@ -114,6 +114,42 @@ function mockProgress(
 const progressListeners = new Map<string, Set<(p: SftpProgress) => void>>()
 
 export function createMockApi(): EasyShellApi {
+  // 首次启动塞两个带 sysInfo 的 mock 连接，方便调试
+  if (load().connections.length === 0) {
+    save({
+      groups: [],
+      connections: [
+        {
+          id: crypto.randomUUID(),
+          name: 'Ubuntu 生产机',
+          groupId: null,
+          host: '10.0.0.8',
+          port: 22,
+          authType: 'password',
+          username: 'root',
+          createdAt: Date.now(),
+          sysInfo: {
+            os: 'Ubuntu 22.04',
+            cpuCores: 8,
+            memTotal: '15G',
+            diskTotal: '39G',
+            collectedAt: Date.now() - 3600_000
+          }
+        },
+        {
+          id: crypto.randomUUID(),
+          name: 'CentOS 测试机',
+          groupId: null,
+          host: '10.0.0.9',
+          port: 22,
+          authType: 'password',
+          username: 'root',
+          createdAt: Date.now(),
+          sysInfo: null
+        }
+      ]
+    })
+  }
   return {
     connections: {
       list: async () => load().connections,
@@ -176,6 +212,25 @@ export function createMockApi(): EasyShellApi {
         await delay(500)
         return { ok: true, latency: 42 }
       },
+      collectInfo: async (connectionId) => {
+        await delay(800)
+        const d = load()
+        const idx = d.connections.findIndex((c) => c.id === connectionId)
+        if (idx === -1) return { ok: false, error: '连接不存在' }
+        d.connections[idx] = {
+          ...d.connections[idx],
+          sysInfo: {
+            os: 'Ubuntu 22.04',
+            cpuCores: 4,
+            memTotal: '7G',
+            diskTotal: '19G',
+            collectedAt: Date.now()
+          }
+        }
+        save(d)
+        return { ok: true }
+      },
+      onConnectionsChanged: () => () => {},
       onOutput: (_sessionId, cb) => {
         const lines = [
           'Welcome to Ubuntu 22.04 LTS (mock)\r\n',
