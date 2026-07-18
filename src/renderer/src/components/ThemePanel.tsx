@@ -26,7 +26,10 @@ export default function ThemePanel({ onClose }: Props): JSX.Element {
         <button
           key={t.id}
           className={`theme-card ${t.id === theme.id ? 'active' : ''}`}
-          onClick={() => setTheme(t.id)}
+          onClick={() => {
+            setTheme(t.id)
+            onClose()
+          }}
         >
           <span className="swatches">
             <i style={{ background: t.vars['--bg'] }} />
