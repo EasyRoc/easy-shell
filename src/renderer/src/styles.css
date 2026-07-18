@@ -96,6 +96,81 @@ textarea::placeholder {
   flex: 1;
 }
 
+.topbar .session-tab {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-weight: 400;
+  border-bottom: none;
+  cursor: pointer;
+}
+
+.topbar .session-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.topbar .session-tab .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.topbar .session-tab .dot.closed {
+  background: #636366;
+}
+
+.topbar .session-tab .close {
+  color: #636366;
+  padding: 0 3px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+
+.topbar .session-tab .close:hover {
+  color: var(--red);
+  background: var(--bg-active);
+}
+
+.terminal-wrapper {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* ---------- 输入弹窗 ---------- */
+.prompt-modal {
+  width: 360px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.prompt-title {
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+}
+
+.prompt-modal input {
+  width: 100%;
+}
+
+.prompt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .main {
   display: flex;
   flex: 1;

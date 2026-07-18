@@ -4,6 +4,7 @@ import { api } from './api'
 import Sidebar from './components/Sidebar'
 import HostTable from './components/HostTable'
 import HostEditModal from './components/HostEditModal'
+import PromptModal from './components/PromptModal'
 import TerminalView, { TermSession } from './components/TerminalView'
 
 export type GroupFilter = 'all' | 'favorite' | 'recent' | string
@@ -16,6 +17,7 @@ export default function App(): JSX.Element {
   const [sessions, setSessions] = useState<TermSession[]>([])
   const [activeSession, setActiveSession] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'terminal'>('list')
+  const [showGroupPrompt, setShowGroupPrompt] = useState(false)
 
   const reload = useCallback(async () => {
     const [conns, grps] = await Promise.all([
@@ -56,10 +58,9 @@ export default function App(): JSX.Element {
   }
 
   // ---------- 分组 ----------
-  const handleCreateGroup = async (): Promise<void> => {
-    const name = window.prompt('分组名称：')
-    if (!name?.trim()) return
-    await api.groups.create(name.trim())
+  const handleCreateGroup = async (name: string): Promise<void> => {
+    setShowGroupPrompt(false)
+    await api.groups.create(name)
     reload()
   }
 
@@ -94,14 +95,18 @@ export default function App(): JSX.Element {
   }
 
   const handleCloseSession = (key: string): void => {
-    setSessions((prev) => {
-      const next = prev.filter((s) => s.key !== key)
-      if (activeSession === key) {
-        setActiveSession(next.length > 0 ? next[next.length - 1].key : null)
-        if (next.length === 0) setView('list')
-      }
-      return next
-    })
+    const next = sessions.filter((s) => s.key !== key)
+    setSessions(next)
+    if (activeSession === key) {
+      const fallback = next.length > 0 ? next[next.length - 1].key : null
+      setActiveSession(fallback)
+      if (fallback === null) setView('list')
+    }
+  }
+
+  const gotoSession = (key: string): void => {
+    setActiveSession(key)
+    setView('terminal')
   }
 
   // ---------- 过滤 ----------
@@ -118,34 +123,46 @@ export default function App(): JSX.Element {
         )
       : filtered
 
-  if (view === 'terminal') {
-    return (
-      <div className="app">
-        <TerminalView
-          sessions={sessions}
-          activeKey={activeSession}
-          onSwitch={setActiveSession}
-          onClose={handleCloseSession}
-          onBack={() => setView('list')}
-          onStateChange={handleSessionState}
-        />
-      </div>
-    )
-  }
-
   return (
     <div className="app">
-      <div className="topbar">
+      <div
+        className="topbar"
+        style={{ display: view === 'list' ? 'flex' : 'none' }}
+      >
         <span className="tab">SSH</span>
+        {sessions.map((s) => (
+          <span
+            key={s.key}
+            className="tab session-tab"
+            onClick={() => gotoSession(s.key)}
+          >
+            <span
+              className={`dot ${s.status === 'connected' ? '' : 'closed'}`}
+            />
+            {s.name}
+            <button
+              className="close"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleCloseSession(s.key)
+              }}
+            >
+              ×
+            </button>
+          </span>
+        ))}
         <div className="spacer" />
       </div>
-      <div className="main">
+      <div
+        className="main"
+        style={{ display: view === 'list' ? 'flex' : 'none' }}
+      >
         <Sidebar
           groups={groups}
           connections={connections}
           filter={filter}
           onSelect={setFilter}
-          onCreateGroup={handleCreateGroup}
+          onCreateGroup={() => setShowGroupPrompt(true)}
           onRemoveGroup={handleRemoveGroup}
           onNewConnection={() => setEditing('new')}
         />
@@ -173,12 +190,35 @@ export default function App(): JSX.Element {
           />
         </div>
       </div>
+      {sessions.length > 0 && (
+        <div
+          className="terminal-wrapper"
+          style={{ display: view === 'terminal' ? 'flex' : 'none' }}
+        >
+          <TerminalView
+            sessions={sessions}
+            activeKey={activeSession}
+            onSwitch={setActiveSession}
+            onClose={handleCloseSession}
+            onBack={() => setView('list')}
+            onStateChange={handleSessionState}
+          />
+        </div>
+      )}
       {editing !== null && (
         <HostEditModal
           connection={editing === 'new' ? null : editing}
           groups={groups}
           onClose={() => setEditing(null)}
           onSave={handleSave}
+        />
+      )}
+      {showGroupPrompt && (
+        <PromptModal
+          title="新建分组"
+          placeholder="分组名称"
+          onOk={handleCreateGroup}
+          onCancel={() => setShowGroupPrompt(false)}
         />
       )}
     </div>
