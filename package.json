@@ -1,13 +1,46 @@
 {
   "name": "easy-shell",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Easy Shell - a simple SSH client",
   "main": "./out/main/index.js",
+  "productName": "Easy Shell",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
-    "start": "electron-vite preview"
+    "start": "electron-vite preview",
+    "pack": "npm run build && electron-builder --dir",
+    "dist:mac": "npm run build && electron-builder --mac --x64 --arm64",
+    "dist:win": "npm run build && electron-builder --win --x64 --ia32",
+    "dist": "npm run build && electron-builder --mac --x64 --arm64 --win --x64 --ia32"
+  },
+  "build": {
+    "appId": "com.easyshell.app",
+    "productName": "Easy Shell",
+    "directories": {
+      "output": "release"
+    },
+    "npmRebuild": false,
+    "files": [
+      "out/**/*"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64", "ia32"]
+        }
+      ]
+    }
   },
   "dependencies": {
     "ssh2": "^1.15.0"
@@ -21,6 +54,7 @@
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
     "electron": "^31.3.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^2.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
