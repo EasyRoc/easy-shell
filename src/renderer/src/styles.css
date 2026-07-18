@@ -692,6 +692,15 @@ tbody tr:hover {
   overflow-x: auto;
 }
 
+.term-tabs .spacer {
+  flex: 1;
+}
+
+.term-tabs .back-btn.active {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
 .term-tab {
   display: flex;
   align-items: center;
@@ -732,6 +741,12 @@ tbody tr:hover {
 
 .term-tab .dot.closed {
   background: var(--text-faint);
+}
+
+.term-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
 }
 
 .term-bodies {
