@@ -3,7 +3,8 @@ import { api } from '../api'
 import type { SftpFileEntry, SftpProgress } from '../../../shared/types'
 
 interface Props {
-  sessionId: string
+  servers: { sessionId: string; name: string }[]
+  defaultSessionId: string
   onClose: () => void
 }
 
@@ -25,7 +26,12 @@ function joinPath(dir: string, name: string): string {
   return dir.endsWith('/') ? dir + name : `${dir}/${name}`
 }
 
-export default function FilePanel({ sessionId, onClose }: Props): JSX.Element {
+export default function FilePanel({
+  servers,
+  defaultSessionId,
+  onClose
+}: Props): JSX.Element {
+  const [currentSessionId, setCurrentSessionId] = useState(defaultSessionId)
   const [path, setPath] = useState('.')
   const [entries, setEntries] = useState<SftpFileEntry[]>([])
   const [loading, setLoading] = useState(false)
@@ -43,7 +49,7 @@ export default function FilePanel({ sessionId, onClose }: Props): JSX.Element {
       setLoading(true)
       setError(null)
       try {
-        const list = await api.sftp.list(sessionId, dir)
+        const list = await api.sftp.list(currentSessionId, dir)
         list.sort((a, b) =>
           a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1
         )
@@ -55,20 +61,20 @@ export default function FilePanel({ sessionId, onClose }: Props): JSX.Element {
         setLoading(false)
       }
     },
-    [sessionId]
+    [currentSessionId]
   )
 
   useEffect(() => {
     api.sftp
-      .open(sessionId)
+      .open(currentSessionId)
       .then(() => refresh('.'))
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-    const off = api.sftp.onProgress(sessionId, (p) => setProgress(p))
+    const off = api.sftp.onProgress(currentSessionId, (p) => setProgress(p))
     return () => {
       off()
-      api.sftp.close(sessionId)
+      api.sftp.close(currentSessionId)
     }
-  }, [sessionId, refresh])
+  }, [currentSessionId, refresh])
 
   useEffect(() => {
     if (progress?.done && !progress.error) refresh(path)
@@ -79,7 +85,7 @@ export default function FilePanel({ sessionId, onClose }: Props): JSX.Element {
     if (localPaths.length === 0) return
     setError(null)
     try {
-      await api.sftp.upload(sessionId, localPaths, path)
+      await api.sftp.upload(currentSessionId, localPaths, path)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -88,7 +94,7 @@ export default function FilePanel({ sessionId, onClose }: Props): JSX.Element {
   const handleDownload = async (entry: SftpFileEntry): Promise<void> => {
     setError(null)
     try {
-      await api.sftp.download(sessionId, joinPath(path, entry.name), entry.name)
+      await api.sftp.download(currentSessionId, joinPath(path, entry.name), entry.name)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -99,7 +105,7 @@ export default function FilePanel({ sessionId, onClose }: Props): JSX.Element {
     if (!window.confirm(`确定删除${kind}「${entry.name}」吗？`)) return
     setError(null)
     try {
-      await api.sftp.remove(sessionId, joinPath(path, entry.name), entry.isDir)
+      await api.sftp.remove(currentSessionId, joinPath(path, entry.name), entry.isDir)
       refresh(path)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -113,7 +119,7 @@ export default function FilePanel({ sessionId, onClose }: Props): JSX.Element {
     setError(null)
     try {
       await api.sftp.rename(
-        sessionId,
+        currentSessionId,
         joinPath(path, oldName),
         joinPath(path, newName)
       )
@@ -130,7 +136,7 @@ export default function FilePanel({ sessionId, onClose }: Props): JSX.Element {
     if (!name) return
     setError(null)
     try {
-      await api.sftp.mkdir(sessionId, joinPath(path, name))
+      await api.sftp.mkdir(currentSessionId, joinPath(path, name))
       refresh(path)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -164,6 +170,19 @@ export default function FilePanel({ sessionId, onClose }: Props): JSX.Element {
       }}
     >
       <div className="fp-toolbar">
+        {servers.length > 1 && (
+          <select
+            className="fp-server-select"
+            value={currentSessionId}
+            onChange={(e) => setCurrentSessionId(e.target.value)}
+          >
+            {servers.map((s) => (
+              <option key={s.sessionId} value={s.sessionId}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="fp-crumbs">
           <span className="crumb" onClick={() => gotoCrumb(-1)}>
             家目录
@@ -307,7 +326,7 @@ export default function FilePanel({ sessionId, onClose }: Props): JSX.Element {
           <button
             className="fp-op danger"
             title="取消传输"
-            onClick={() => api.sftp.cancel(sessionId)}
+            onClick={() => api.sftp.cancel(currentSessionId)}
           >
             ×
           </button>

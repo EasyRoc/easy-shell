@@ -31,7 +31,7 @@ export default function TerminalView(props: Props): JSX.Element {
     <div className="terminal-page">
       <div className="term-tabs">
         <button className="back-btn" onClick={props.onBack}>
-          ← 列表
+          ← SSH
         </button>
         {props.sessions.map((s) => (
           <div
@@ -80,7 +80,10 @@ export default function TerminalView(props: Props): JSX.Element {
         </div>
         {showFiles && activeSshId && (
           <FilePanel
-            sessionId={activeSshId}
+            servers={props.sessions
+              .filter((s) => sessionIds[s.key])
+              .map((s) => ({ sessionId: sessionIds[s.key], name: s.name }))}
+            defaultSessionId={activeSshId}
             onClose={() => setShowFiles(false)}
           />
         )}
