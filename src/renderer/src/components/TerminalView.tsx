@@ -80,10 +80,7 @@ export default function TerminalView(props: Props): JSX.Element {
         </div>
         {showFiles && activeSshId && (
           <FilePanel
-            servers={props.sessions
-              .filter((s) => sessionIds[s.key])
-              .map((s) => ({ sessionId: sessionIds[s.key], name: s.name }))}
-            defaultSessionId={activeSshId}
+            sessionId={activeSshId}
             onClose={() => setShowFiles(false)}
           />
         )}

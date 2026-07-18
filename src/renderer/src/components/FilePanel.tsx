@@ -3,8 +3,7 @@ import { api } from '../api'
 import type { SftpFileEntry, SftpProgress } from '../../../shared/types'
 
 interface Props {
-  servers: { sessionId: string; name: string }[]
-  defaultSessionId: string
+  sessionId: string
   onClose: () => void
 }
 
@@ -37,11 +36,9 @@ const QUICK_DIRS = [
 ]
 
 export default function FilePanel({
-  servers,
-  defaultSessionId,
+  sessionId,
   onClose
 }: Props): JSX.Element {
-  const [currentSessionId, setCurrentSessionId] = useState(defaultSessionId)
   const [path, setPath] = useState('.')
   const [entries, setEntries] = useState<SftpFileEntry[]>([])
   const [loading, setLoading] = useState(false)
@@ -60,7 +57,7 @@ export default function FilePanel({
       setLoading(true)
       setError(null)
       try {
-        const list = await api.sftp.list(currentSessionId, dir)
+        const list = await api.sftp.list(sessionId, dir)
         list.sort((a, b) =>
           a.isDir === b.isDir ? a.name.localeCompare(b.name) : a.isDir ? -1 : 1
         )
@@ -73,20 +70,20 @@ export default function FilePanel({
         setLoading(false)
       }
     },
-    [currentSessionId]
+    [sessionId]
   )
 
   useEffect(() => {
     api.sftp
-      .open(currentSessionId)
+      .open(sessionId)
       .then(() => refresh('.'))
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
-    const off = api.sftp.onProgress(currentSessionId, (p) => setProgress(p))
+    const off = api.sftp.onProgress(sessionId, (p) => setProgress(p))
     return () => {
       off()
-      api.sftp.close(currentSessionId)
+      api.sftp.close(sessionId)
     }
-  }, [currentSessionId, refresh])
+  }, [sessionId, refresh])
 
   useEffect(() => {
     if (progress?.done && !progress.error) refresh(path)
@@ -97,7 +94,7 @@ export default function FilePanel({
     if (localPaths.length === 0) return
     setError(null)
     try {
-      await api.sftp.upload(currentSessionId, localPaths, path)
+      await api.sftp.upload(sessionId, localPaths, path)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -106,7 +103,7 @@ export default function FilePanel({
   const handleDownload = async (entry: SftpFileEntry): Promise<void> => {
     setError(null)
     try {
-      await api.sftp.download(currentSessionId, joinPath(path, entry.name), entry.name)
+      await api.sftp.download(sessionId, joinPath(path, entry.name), entry.name)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
@@ -117,7 +114,7 @@ export default function FilePanel({
     if (!window.confirm(`确定删除${kind}「${entry.name}」吗？`)) return
     setError(null)
     try {
-      await api.sftp.remove(currentSessionId, joinPath(path, entry.name), entry.isDir)
+      await api.sftp.remove(sessionId, joinPath(path, entry.name), entry.isDir)
       refresh(path)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -131,7 +128,7 @@ export default function FilePanel({
     setError(null)
     try {
       await api.sftp.rename(
-        currentSessionId,
+        sessionId,
         joinPath(path, oldName),
         joinPath(path, newName)
       )
@@ -148,7 +145,7 @@ export default function FilePanel({
     if (!name) return
     setError(null)
     try {
-      await api.sftp.mkdir(currentSessionId, joinPath(path, name))
+      await api.sftp.mkdir(sessionId, joinPath(path, name))
       refresh(path)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -175,19 +172,6 @@ export default function FilePanel({
       }}
     >
       <div className="fp-nav">
-        {servers.length > 1 && (
-          <select
-            className="fp-server-select"
-            value={currentSessionId}
-            onChange={(e) => setCurrentSessionId(e.target.value)}
-          >
-            {servers.map((s) => (
-              <option key={s.sessionId} value={s.sessionId}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        )}
         <select
           className="fp-quick-dir"
           value=""
@@ -380,7 +364,7 @@ export default function FilePanel({
           <button
             className="fp-op danger"
             title="取消传输"
-            onClick={() => api.sftp.cancel(currentSessionId)}
+            onClick={() => api.sftp.cancel(sessionId)}
           >
             ×
           </button>

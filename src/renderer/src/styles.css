@@ -930,23 +930,6 @@ tbody tr:hover {
   box-sizing: border-box;
 }
 
-.fp-server-select {
-  flex-shrink: 0;
-  max-width: 110px;
-  padding: 3px 6px;
-  font-size: 12px;
-  background: var(--bg-panel);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  outline: none;
-  cursor: pointer;
-}
-
-.fp-server-select:hover {
-  border-color: var(--green-dim, var(--green));
-}
-
 .fp-crumbs {
   flex: 1;
   min-width: 0;
