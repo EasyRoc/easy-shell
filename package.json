@@ -22,9 +22,11 @@
     },
     "npmRebuild": false,
     "files": [
-      "out/**/*"
+      "out/**/*",
+      "!**/node_modules/cpu-features{,/**/*}"
     ],
     "mac": {
+      "icon": "build/icon.icns",
       "target": [
         {
           "target": "dmg",
@@ -34,6 +36,7 @@
       "category": "public.app-category.developer-tools"
     },
     "win": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "portable",
