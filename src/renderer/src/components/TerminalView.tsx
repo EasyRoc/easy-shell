@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { api } from '../api'
+import { getCurrentTheme, useTheme } from '../theme'
 
 export interface TermSession {
   key: string
@@ -82,7 +83,7 @@ function TermBody(props: {
       cursorBlink: true,
       fontSize: 13,
       fontFamily: "'SF Mono', Menlo, Monaco, 'Courier New', monospace",
-      theme: { background: '#000000' }
+      theme: { ...getCurrentTheme().term }
     })
     const fit = new FitAddon()
     term.loadAddon(fit)
@@ -168,6 +169,14 @@ function TermBody(props: {
       }, 0)
     }
   }, [props.active])
+
+  // 主题切换时实时更新终端配色
+  const theme = useTheme()
+  useEffect(() => {
+    if (termRef.current) {
+      termRef.current.options.theme = { ...theme.term }
+    }
+  }, [theme])
 
   return (
     <div
