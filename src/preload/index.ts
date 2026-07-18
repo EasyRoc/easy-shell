@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
-import type { EasyShellApi, SSHConnection } from '../shared/types'
+import type { EasyShellApi, SSHConnection, SftpProgress } from '../shared/types'
 
 const api: EasyShellApi = {
   connections: {
@@ -31,6 +31,28 @@ const api: EasyShellApi = {
     onClosed: (sessionId, cb) => {
       const channel = `ssh:closed:${sessionId}`
       const listener = (): void => cb()
+      ipcRenderer.on(channel, listener)
+      return () => ipcRenderer.removeListener(channel, listener)
+    }
+  },
+  sftp: {
+    open: (sessionId) => ipcRenderer.invoke('sftp:open', sessionId),
+    close: (sessionId) => ipcRenderer.invoke('sftp:close', sessionId),
+    list: (sessionId, path) => ipcRenderer.invoke('sftp:list', sessionId, path),
+    mkdir: (sessionId, path) =>
+      ipcRenderer.invoke('sftp:mkdir', sessionId, path),
+    remove: (sessionId, path, isDir) =>
+      ipcRenderer.invoke('sftp:remove', sessionId, path, isDir),
+    rename: (sessionId, oldPath, newPath) =>
+      ipcRenderer.invoke('sftp:rename', sessionId, oldPath, newPath),
+    upload: (sessionId, localPaths, remoteDir) =>
+      ipcRenderer.invoke('sftp:upload', sessionId, localPaths, remoteDir),
+    download: (sessionId, remotePath, defaultName) =>
+      ipcRenderer.invoke('sftp:download', sessionId, remotePath, defaultName),
+    cancel: (sessionId) => ipcRenderer.invoke('sftp:cancel', sessionId),
+    onProgress: (sessionId, cb) => {
+      const channel = `sftp:progress:${sessionId}`
+      const listener = (_e: IpcRendererEvent, p: SftpProgress): void => cb(p)
       ipcRenderer.on(channel, listener)
       return () => ipcRenderer.removeListener(channel, listener)
     }

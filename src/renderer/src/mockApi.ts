@@ -1,7 +1,9 @@
 import type {
   EasyShellApi,
   SSHConnection,
-  ConnectionGroup
+  ConnectionGroup,
+  SftpFileEntry,
+  SftpProgress
 } from '../../shared/types'
 
 // 仅在纯浏览器环境（无 Electron preload）下使用的 UI 调试 mock。
@@ -32,6 +34,84 @@ function save(d: MockData): void {
 
 const delay = (ms: number): Promise<void> =>
   new Promise((r) => setTimeout(r, ms))
+
+// ---------- mock 文件系统 ----------
+interface MockNode {
+  isDir: boolean
+  size: number
+  mtime: number
+  children?: Record<string, MockNode>
+}
+
+const now = Math.floor(Date.now() / 1000)
+const MOCK_FS: Record<string, MockNode> = {
+  Documents: {
+    isDir: true,
+    size: 4096,
+    mtime: now - 86400,
+    children: {
+      'report.pdf': { isDir: false, size: 245760, mtime: now - 3600 },
+      pics: {
+        isDir: true,
+        size: 4096,
+        mtime: now - 7200,
+        children: {
+          'photo.jpg': { isDir: false, size: 1048576, mtime: now - 1800 }
+        }
+      }
+    }
+  },
+  app: {
+    isDir: true,
+    size: 4096,
+    mtime: now - 43200,
+    children: {
+      'server.js': { isDir: false, size: 8192, mtime: now - 4000 },
+      'package.json': { isDir: false, size: 1024, mtime: now - 4000 },
+      logs: { isDir: true, size: 4096, mtime: now - 100, children: {} }
+    }
+  },
+  'notes.txt': { isDir: false, size: 2048, mtime: now - 600 },
+  'backup.tar.gz': { isDir: false, size: 15728640, mtime: now - 172800 }
+}
+
+function resolveDir(dir: string): Record<string, MockNode> {
+  const parts = dir.split('/').filter((p) => p && p !== '.')
+  let cur: Record<string, MockNode> = MOCK_FS
+  for (const p of parts) {
+    const node = cur[p]
+    if (!node || !node.isDir || !node.children) throw new Error('目录不存在: ' + dir)
+    cur = node.children
+  }
+  return cur
+}
+
+function toEntries(nodes: Record<string, MockNode>): SftpFileEntry[] {
+  return Object.entries(nodes).map(([name, n]) => ({
+    name,
+    isDir: n.isDir,
+    size: n.size,
+    mtime: n.mtime
+  }))
+}
+
+function mockProgress(
+  sessionId: string,
+  file: string,
+  listeners: Map<string, Set<(p: SftpProgress) => void>>
+): void {
+  let pct = 0
+  const timer = setInterval(() => {
+    pct += 10
+    const done = pct >= 100
+    listeners.get(sessionId)?.forEach((cb) =>
+      cb({ file, percent: Math.min(pct, 100), done })
+    )
+    if (done) clearInterval(timer)
+  }, 100)
+}
+
+const progressListeners = new Map<string, Set<(p: SftpProgress) => void>>()
 
 export function createMockApi(): EasyShellApi {
   return {
@@ -110,6 +190,76 @@ export function createMockApi(): EasyShellApi {
         return () => clearInterval(timer)
       },
       onClosed: () => () => {}
+    },
+    sftp: {
+      open: async () => {
+        await delay(300)
+      },
+      close: async () => {},
+      list: async (_sessionId, path) => {
+        await delay(200)
+        return toEntries(resolveDir(path))
+      },
+      mkdir: async (_sessionId, path) => {
+        await delay(150)
+        const parts = path.split('/').filter((p) => p && p !== '.')
+        const name = parts.pop()
+        if (!name) throw new Error('路径无效')
+        const parent = resolveDir(parts.join('/'))
+        parent[name] = { isDir: true, size: 4096, mtime: now, children: {} }
+      },
+      remove: async (_sessionId, path, isDir) => {
+        await delay(150)
+        const parts = path.split('/').filter((p) => p && p !== '.')
+        const name = parts.pop()
+        if (!name) throw new Error('路径无效')
+        const parent = resolveDir(parts.join('/'))
+        const node = parent[name]
+        if (!node) throw new Error('文件不存在')
+        if (isDir && node.children && Object.keys(node.children).length > 0) {
+          throw new Error('文件夹不为空，无法删除')
+        }
+        delete parent[name]
+      },
+      rename: async (_sessionId, oldPath, newPath) => {
+        await delay(150)
+        const parts = oldPath.split('/').filter((p) => p && p !== '.')
+        const oldName = parts.pop()
+        const newName = newPath.split('/').pop()
+        if (!oldName || !newName) throw new Error('路径无效')
+        const parent = resolveDir(parts.join('/'))
+        const node = parent[oldName]
+        if (!node) throw new Error('文件不存在')
+        parent[newName] = node
+        delete parent[oldName]
+      },
+      upload: async (sessionId, localPaths, remoteDir) => {
+        const dir = resolveDir(remoteDir)
+        for (const p of localPaths) {
+          const name = p.split('/').pop() || p
+          mockProgress(sessionId, name, progressListeners)
+          await delay(1100)
+          dir[name] = { isDir: false, size: 102400, mtime: now }
+        }
+      },
+      download: async (sessionId, remotePath) => {
+        const name = remotePath.split('/').pop() || remotePath
+        mockProgress(sessionId, name, progressListeners)
+        await delay(1100)
+        return '/mock/downloads/' + name
+      },
+      cancel: async () => {},
+      onProgress: (sessionId, cb) => {
+        let set = progressListeners.get(sessionId)
+        if (!set) {
+          set = new Set()
+          progressListeners.set(sessionId, set)
+        }
+        set.add(cb)
+        return () => {
+          set.delete(cb)
+        }
+      }
     }
   }
 }

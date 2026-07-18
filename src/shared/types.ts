@@ -37,6 +37,20 @@ export interface TestResult {
   error?: string
 }
 
+export interface SftpFileEntry {
+  name: string
+  isDir: boolean
+  size: number
+  mtime: number // 秒级时间戳
+}
+
+export interface SftpProgress {
+  file: string
+  percent: number // 0-100
+  done: boolean
+  error?: string
+}
+
 // preload 暴露给渲染进程的 API 形状
 export interface EasyShellApi {
   connections: {
@@ -58,5 +72,17 @@ export interface EasyShellApi {
     test(conn: Partial<SSHConnection>): Promise<TestResult>
     onOutput(sessionId: string, cb: (data: string) => void): () => void
     onClosed(sessionId: string, cb: () => void): () => void
+  }
+  sftp: {
+    open(sessionId: string): Promise<void>
+    close(sessionId: string): Promise<void>
+    list(sessionId: string, path: string): Promise<SftpFileEntry[]>
+    mkdir(sessionId: string, path: string): Promise<void>
+    remove(sessionId: string, path: string, isDir: boolean): Promise<void>
+    rename(sessionId: string, oldPath: string, newPath: string): Promise<void>
+    upload(sessionId: string, localPaths: string[], remoteDir: string): Promise<void>
+    download(sessionId: string, remotePath: string, defaultName: string): Promise<string | null>
+    cancel(sessionId: string): Promise<void>
+    onProgress(sessionId: string, cb: (p: SftpProgress) => void): () => void
   }
 }

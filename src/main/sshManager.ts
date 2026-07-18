@@ -137,6 +137,10 @@ export function disconnectAll(): void {
   for (const id of [...sessions.keys()]) disconnect(id)
 }
 
+export function getClient(sessionId: string): Client | null {
+  return sessions.get(sessionId)?.client ?? null
+}
+
 // 测试连接：建连成功即断开，返回耗时
 export function testConnection(conn: Partial<SSHConnection>): Promise<TestResult> {
   return new Promise((resolve) => {

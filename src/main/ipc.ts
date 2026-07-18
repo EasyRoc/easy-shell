@@ -1,6 +1,7 @@
-import { ipcMain, BrowserWindow } from 'electron'
+import { ipcMain, BrowserWindow, dialog } from 'electron'
 import * as store from './store'
 import * as ssh from './sshManager'
+import * as sftp from './sftpManager'
 import type { SSHConnection } from '../shared/types'
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
@@ -13,6 +14,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       getWindow()?.webContents.send(`ssh:closed:${sessionId}`)
     }
   )
+
+  // SFTP 进度推给渲染进程
+  sftp.setProgressSink((sessionId, p) => {
+    getWindow()?.webContents.send(`sftp:progress:${sessionId}`, p)
+  })
 
   // ---------- 连接 CRUD ----------
   ipcMain.handle('connections:list', () => store.listConnections())
@@ -60,5 +66,52 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   )
   ipcMain.handle('ssh:test', (_e, conn: Partial<SSHConnection>) =>
     ssh.testConnection(conn)
+  )
+
+  // ---------- SFTP ----------
+  ipcMain.handle('sftp:open', async (_e, sessionId: string) => {
+    const client = ssh.getClient(sessionId)
+    if (!client) throw new Error('SSH 会话不存在')
+    return sftp.open(sessionId, client)
+  })
+  ipcMain.handle('sftp:close', (_e, sessionId: string) =>
+    sftp.close(sessionId)
+  )
+  ipcMain.handle('sftp:list', (_e, sessionId: string, path: string) =>
+    sftp.list(sessionId, path)
+  )
+  ipcMain.handle('sftp:mkdir', (_e, sessionId: string, path: string) =>
+    sftp.mkdir(sessionId, path)
+  )
+  ipcMain.handle(
+    'sftp:remove',
+    (_e, sessionId: string, path: string, isDir: boolean) =>
+      sftp.remove(sessionId, path, isDir)
+  )
+  ipcMain.handle(
+    'sftp:rename',
+    (_e, sessionId: string, oldPath: string, newPath: string) =>
+      sftp.rename(sessionId, oldPath, newPath)
+  )
+  ipcMain.handle(
+    'sftp:upload',
+    (_e, sessionId: string, localPaths: string[], remoteDir: string) =>
+      sftp.upload(sessionId, localPaths, remoteDir)
+  )
+  ipcMain.handle(
+    'sftp:download',
+    async (_e, sessionId: string, remotePath: string, defaultName: string) => {
+      const win = getWindow()
+      if (!win) throw new Error('窗口不存在')
+      const result = await dialog.showSaveDialog(win, {
+        defaultPath: defaultName
+      })
+      if (result.canceled || !result.filePath) return null
+      await sftp.download(sessionId, remotePath, result.filePath)
+      return result.filePath
+    }
+  )
+  ipcMain.handle('sftp:cancel', (_e, sessionId: string) =>
+    sftp.cancel(sessionId)
   )
 }

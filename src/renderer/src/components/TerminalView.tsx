@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { api } from '../api'
 import { getCurrentTheme, useTheme } from '../theme'
+import FilePanel from './FilePanel'
 
 export interface TermSession {
   key: string
@@ -21,6 +22,11 @@ interface Props {
 }
 
 export default function TerminalView(props: Props): JSX.Element {
+  const [sessionIds, setSessionIds] = useState<Record<string, string>>({})
+  const [showFiles, setShowFiles] = useState(false)
+
+  const activeSshId = props.activeKey ? sessionIds[props.activeKey] : null
+
   return (
     <div className="terminal-page">
       <div className="term-tabs">
@@ -48,16 +54,36 @@ export default function TerminalView(props: Props): JSX.Element {
             </button>
           </div>
         ))}
+        <div className="spacer" />
+        {activeSshId && (
+          <button
+            className={`back-btn ${showFiles ? 'active' : ''}`}
+            onClick={() => setShowFiles((v) => !v)}
+          >
+            文件
+          </button>
+        )}
       </div>
-      <div className="term-bodies">
-        {props.sessions.map((s) => (
-          <TermBody
-            key={s.key}
-            session={s}
-            active={props.activeKey === s.key}
-            onStateChange={props.onStateChange}
+      <div className="term-main">
+        <div className="term-bodies">
+          {props.sessions.map((s) => (
+            <TermBody
+              key={s.key}
+              session={s}
+              active={props.activeKey === s.key}
+              onStateChange={props.onStateChange}
+              onSessionId={(key, id) =>
+                setSessionIds((prev) => ({ ...prev, [key]: id }))
+              }
+            />
+          ))}
+        </div>
+        {showFiles && activeSshId && (
+          <FilePanel
+            sessionId={activeSshId}
+            onClose={() => setShowFiles(false)}
           />
-        ))}
+        )}
       </div>
     </div>
   )
@@ -67,6 +93,7 @@ function TermBody(props: {
   session: TermSession
   active: boolean
   onStateChange: (key: string, status: TermSession['status']) => void
+  onSessionId: (key: string, sessionId: string) => void
 }): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
@@ -107,6 +134,7 @@ function TermBody(props: {
           return
         }
         sessionIdRef.current = sessionId
+        props.onSessionId(session.key, sessionId)
         onStateChange(session.key, 'connected')
         term.focus()
 
