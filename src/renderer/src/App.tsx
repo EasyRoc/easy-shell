@@ -6,6 +6,7 @@ import HostTable from './components/HostTable'
 import HostEditModal from './components/HostEditModal'
 import PromptModal from './components/PromptModal'
 import TerminalView, { TermSession } from './components/TerminalView'
+import ThemePanel from './components/ThemePanel'
 
 export type GroupFilter = 'all' | 'favorite' | 'recent' | string
 
@@ -18,6 +19,7 @@ export default function App(): JSX.Element {
   const [activeSession, setActiveSession] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'terminal'>('list')
   const [showGroupPrompt, setShowGroupPrompt] = useState(false)
+  const [showThemePanel, setShowThemePanel] = useState(false)
 
   const reload = useCallback(async () => {
     const [conns, grps] = await Promise.all([
@@ -152,6 +154,18 @@ export default function App(): JSX.Element {
           </span>
         ))}
         <div className="spacer" />
+        <div className="theme-entry">
+          <button
+            className="icon-btn"
+            title="主题"
+            onClick={() => setShowThemePanel((v) => !v)}
+          >
+            ⚙
+          </button>
+          {showThemePanel && (
+            <ThemePanel onClose={() => setShowThemePanel(false)} />
+          )}
+        </div>
       </div>
       <div
         className="main"
