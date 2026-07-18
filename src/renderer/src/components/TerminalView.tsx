@@ -1,0 +1,178 @@
+import { useEffect, useRef } from 'react'
+import { Terminal } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
+import { api } from '../api'
+
+export interface TermSession {
+  key: string
+  connectionId: string
+  name: string
+  status: 'connecting' | 'connected' | 'closed' | 'error'
+}
+
+interface Props {
+  sessions: TermSession[]
+  activeKey: string | null
+  onSwitch: (key: string) => void
+  onClose: (key: string) => void
+  onBack: () => void
+  onStateChange: (key: string, status: TermSession['status']) => void
+}
+
+export default function TerminalView(props: Props): JSX.Element {
+  return (
+    <div className="terminal-page">
+      <div className="term-tabs">
+        <button className="back-btn" onClick={props.onBack}>
+          ← 列表
+        </button>
+        {props.sessions.map((s) => (
+          <div
+            key={s.key}
+            className={`term-tab ${props.activeKey === s.key ? 'active' : ''}`}
+            onClick={() => props.onSwitch(s.key)}
+          >
+            <span
+              className={`dot ${s.status === 'connected' ? '' : 'closed'}`}
+            />
+            <span>{s.name}</span>
+            <button
+              className="close"
+              onClick={(e) => {
+                e.stopPropagation()
+                props.onClose(s.key)
+              }}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="term-bodies">
+        {props.sessions.map((s) => (
+          <TermBody
+            key={s.key}
+            session={s}
+            active={props.activeKey === s.key}
+            onStateChange={props.onStateChange}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function TermBody(props: {
+  session: TermSession
+  active: boolean
+  onStateChange: (key: string, status: TermSession['status']) => void
+}): JSX.Element {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const termRef = useRef<Terminal | null>(null)
+  const fitRef = useRef<FitAddon | null>(null)
+  const sessionIdRef = useRef<string | null>(null)
+  const { session, onStateChange } = props
+
+  // 初始化终端 + 建立 SSH 连接（每个会话一次）
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const term = new Terminal({
+      cursorBlink: true,
+      fontSize: 13,
+      fontFamily: "'SF Mono', Menlo, Monaco, 'Courier New', monospace",
+      theme: { background: '#000000' }
+    })
+    const fit = new FitAddon()
+    term.loadAddon(fit)
+    term.open(el)
+    fit.fit()
+    termRef.current = term
+    fitRef.current = fit
+
+    term.writeln(`\x1b[32m正在连接 ${session.name} ...\x1b[0m`)
+
+    let offOutput: (() => void) | null = null
+    let offClosed: (() => void) | null = null
+    let disposed = false
+
+    const { cols, rows } = term
+    api.ssh
+      .connect(session.connectionId, cols, rows)
+      .then(({ sessionId }) => {
+        if (disposed) {
+          api.ssh.disconnect(sessionId)
+          return
+        }
+        sessionIdRef.current = sessionId
+        onStateChange(session.key, 'connected')
+        term.focus()
+
+        offOutput = api.ssh.onOutput(sessionId, (data) => term.write(data))
+        offClosed = api.ssh.onClosed(sessionId, () => {
+          term.writeln('\r\n\x1b[31m[连接已断开]\x1b[0m')
+          onStateChange(session.key, 'closed')
+        })
+      })
+      .catch((err: Error) => {
+        term.writeln(`\r\n\x1b[31m连接失败：${err.message}\x1b[0m`)
+        onStateChange(session.key, 'error')
+      })
+
+    const sub = term.onData((data) => {
+      if (sessionIdRef.current) api.ssh.input(sessionIdRef.current, data)
+    })
+
+    const observer = new ResizeObserver(() => {
+      try {
+        fit.fit()
+        if (sessionIdRef.current) {
+          api.ssh.resize(sessionIdRef.current, term.cols, term.rows)
+        }
+      } catch {
+        /* ignore */
+      }
+    })
+    observer.observe(el)
+
+    return () => {
+      disposed = true
+      observer.disconnect()
+      sub.dispose()
+      offOutput?.()
+      offClosed?.()
+      if (sessionIdRef.current) api.ssh.disconnect(sessionIdRef.current)
+      term.dispose()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.key])
+
+  // 切换标签时重新适配尺寸
+  useEffect(() => {
+    if (props.active && fitRef.current && termRef.current) {
+      setTimeout(() => {
+        try {
+          fitRef.current?.fit()
+          termRef.current?.focus()
+          if (sessionIdRef.current && termRef.current) {
+            api.ssh.resize(
+              sessionIdRef.current,
+              termRef.current.cols,
+              termRef.current.rows
+            )
+          }
+        } catch {
+          /* ignore */
+        }
+      }, 0)
+    }
+  }, [props.active])
+
+  return (
+    <div
+      ref={containerRef}
+      className={`term-body ${props.active ? 'active' : ''}`}
+    />
+  )
+}
