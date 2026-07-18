@@ -889,12 +889,45 @@ tbody tr:hover {
   outline-offset: -4px;
 }
 
-.fp-toolbar {
+.fp-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 4px;
   padding: 8px;
   border-bottom: 1px solid var(--border);
+}
+
+.fp-quick-dir,
+.fp-path-input {
+  padding: 3px 6px;
+  font-size: 12px;
+  background: var(--bg-panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  outline: none;
+}
+
+.fp-quick-dir {
+  flex-shrink: 0;
+  cursor: pointer;
+  max-width: 100px;
+}
+
+.fp-quick-dir:hover,
+.fp-path-input:hover {
+  border-color: var(--green-dim, var(--green));
+}
+
+.fp-path-form {
+  flex: 1 1 120px;
+  min-width: 80px;
+}
+
+.fp-path-input {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .fp-server-select {

@@ -26,6 +26,16 @@ function joinPath(dir: string, name: string): string {
   return dir.endsWith('/') ? dir + name : `${dir}/${name}`
 }
 
+const QUICK_DIRS = [
+  { label: '家目录', path: '.' },
+  { label: '根目录', path: '/' },
+  { label: '/etc', path: '/etc' },
+  { label: '/opt', path: '/opt' },
+  { label: '/tmp', path: '/tmp' },
+  { label: '/var/log', path: '/var/log' },
+  { label: '/usr/local', path: '/usr/local' }
+]
+
 export default function FilePanel({
   servers,
   defaultSessionId,
@@ -42,6 +52,7 @@ export default function FilePanel({
   const [creating, setCreating] = useState(false)
   const [createValue, setCreateValue] = useState('')
   const [dragOver, setDragOver] = useState(false)
+  const [pathInput, setPathInput] = useState('.')
   const uploadInputRef = useRef<HTMLInputElement>(null)
 
   const refresh = useCallback(
@@ -55,6 +66,7 @@ export default function FilePanel({
         )
         setEntries(list)
         setPath(dir)
+        setPathInput(dir === '.' ? '.' : dir)
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e))
       } finally {
@@ -144,13 +156,6 @@ export default function FilePanel({
   }
 
   const crumbs = path.split('/').filter((p) => p !== '')
-  const gotoCrumb = (index: number): void => {
-    if (index < 0) {
-      refresh('.')
-      return
-    }
-    refresh(crumbs.slice(0, index + 1).join('/'))
-  }
 
   return (
     <div
@@ -169,7 +174,7 @@ export default function FilePanel({
         handleUpload(paths)
       }}
     >
-      <div className="fp-toolbar">
+      <div className="fp-nav">
         {servers.length > 1 && (
           <select
             className="fp-server-select"
@@ -183,15 +188,55 @@ export default function FilePanel({
             ))}
           </select>
         )}
+        <select
+          className="fp-quick-dir"
+          value=""
+          onChange={(e) => {
+            if (e.target.value) {
+              refresh(e.target.value)
+              setPathInput(e.target.value)
+            }
+          }}
+        >
+          <option value="" disabled>
+            快捷目录 ▾
+          </option>
+          {QUICK_DIRS.map((d) => (
+            <option key={d.path} value={d.path}>
+              {d.label}
+            </option>
+          ))}
+        </select>
+        <form
+          className="fp-path-form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            refresh(pathInput.trim() || '.')
+          }}
+        >
+          <input
+            className="fp-path-input"
+            value={pathInput}
+            onChange={(e) => setPathInput(e.target.value)}
+            placeholder="输入路径，回车跳转"
+          />
+        </form>
         <div className="fp-crumbs">
-          <span className="crumb" onClick={() => gotoCrumb(-1)}>
+          <span className="crumb" onClick={() => { refresh('.'); setPathInput('.') }}>
             家目录
           </span>
           {crumbs.map((c, i) =>
             c === '.' ? null : (
               <span key={i}>
                 <span className="sep">/</span>
-                <span className="crumb" onClick={() => gotoCrumb(i)}>
+                <span
+                  className="crumb"
+                  onClick={() => {
+                    const p = crumbs.slice(0, i + 1).join('/')
+                    refresh(p)
+                    setPathInput(p)
+                  }}
+                >
                   {c}
                 </span>
               </span>
@@ -285,6 +330,15 @@ export default function FilePanel({
             </span>
             <span className="fp-time">{formatTime(entry.mtime)}</span>
             <span className="fp-actions">
+              {!entry.isDir && (
+                <button
+                  className="fp-op"
+                  title="下载"
+                  onClick={() => handleDownload(entry)}
+                >
+                  ↓
+                </button>
+              )}
               <button
                 className="fp-op"
                 title="重命名"
