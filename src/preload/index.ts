@@ -22,6 +22,13 @@ const api: EasyShellApi = {
     disconnect: (sessionId) => ipcRenderer.send('ssh:disconnect', sessionId),
     test: (conn: Partial<SSHConnection>) =>
       ipcRenderer.invoke('ssh:test', conn),
+    collectInfo: (connectionId) =>
+      ipcRenderer.invoke('ssh:collectInfo', connectionId),
+    onConnectionsChanged: (cb) => {
+      const listener = (): void => cb()
+      ipcRenderer.on('connections:changed', listener)
+      return () => ipcRenderer.removeListener('connections:changed', listener)
+    },
     onOutput: (sessionId, cb) => {
       const channel = `ssh:output:${sessionId}`
       const listener = (_e: IpcRendererEvent, data: string): void => cb(data)

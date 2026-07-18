@@ -34,6 +34,13 @@ export default function App(): JSX.Element {
     reload()
   }, [reload])
 
+  useEffect(() => {
+    const off = api.ssh.onConnectionsChanged(() => {
+      reload()
+    })
+    return off
+  }, [reload])
+
   // ---------- 连接管理 ----------
   const handleSave = async (
     data: Omit<SSHConnection, 'id' | 'createdAt'>,
@@ -201,6 +208,7 @@ export default function App(): JSX.Element {
             onEdit={(c) => setEditing(c)}
             onRemove={handleRemove}
             onToggleFav={handleToggleFav}
+            onRefresh={reload}
           />
         </div>
       </div>

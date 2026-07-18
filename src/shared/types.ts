@@ -18,6 +18,13 @@ export interface SSHConnection {
   heartbeat?: number // 毫秒
   favorite?: boolean
   lastConnectedAt?: number
+  sysInfo?: {
+    os: string        // 如 'Ubuntu 22.04'
+    cpuCores: number  // 如 8
+    memTotal: string  // 如 '15G'
+    diskTotal: string // 如 '39G'
+    collectedAt: number
+  } | null
   createdAt: number
 }
 
@@ -70,6 +77,8 @@ export interface EasyShellApi {
     resize(sessionId: string, cols: number, rows: number): void
     disconnect(sessionId: string): void
     test(conn: Partial<SSHConnection>): Promise<TestResult>
+    collectInfo(connectionId: string): Promise<{ ok: boolean; error?: string }>
+    onConnectionsChanged(cb: () => void): () => void
     onOutput(sessionId: string, cb: (data: string) => void): () => void
     onClosed(sessionId: string, cb: () => void): () => void
   }
