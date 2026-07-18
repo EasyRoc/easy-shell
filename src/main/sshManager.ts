@@ -5,6 +5,7 @@ import type { SSHConnection, TestResult } from '../shared/types'
 
 interface Session {
   id: string
+  connectionId: string
   client: Client
   stream: NodeJS.ReadWriteStream | null
 }
@@ -50,7 +51,12 @@ export function connect(
   return new Promise((resolve, reject) => {
     const client = new Client()
     const sessionId = crypto.randomUUID()
-    const session: Session = { id: sessionId, client, stream: null }
+    const session: Session = {
+      id: sessionId,
+      connectionId: conn.id,
+      client,
+      stream: null
+    }
 
     const onReady = (): void => {
       client.shell(
@@ -139,6 +145,13 @@ export function disconnectAll(): void {
 
 export function getClient(sessionId: string): Client | null {
   return sessions.get(sessionId)?.client ?? null
+}
+
+export function getClientByConnectionId(connectionId: string): Client | null {
+  for (const s of sessions.values()) {
+    if (s.connectionId === connectionId) return s.client
+  }
+  return null
 }
 
 // 测试连接：建连成功即断开，返回耗时
