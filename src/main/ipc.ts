@@ -2,6 +2,7 @@ import { ipcMain, BrowserWindow, dialog } from 'electron'
 import * as store from './store'
 import * as ssh from './sshManager'
 import * as sftp from './sftpManager'
+import * as sysInfo from './sysInfoCollector'
 import type { SSHConnection } from '../shared/types'
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
@@ -50,6 +51,9 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       const result = await ssh.connect(conn, cols, rows)
       // 记录最近连接时间
       store.updateConnection(connectionId, { lastConnectedAt: Date.now() })
+      sysInfo.collectSystemInfo(conn).then(() => {
+        getWindow()?.webContents.send('connections:changed')
+      })
       return result
     }
   )
@@ -67,6 +71,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle('ssh:test', (_e, conn: Partial<SSHConnection>) =>
     ssh.testConnection(conn)
   )
+  ipcMain.handle('ssh:collectInfo', async (_e, connectionId: string) => {
+    const conn = store.getConnection(connectionId)
+    if (!conn) throw new Error('连接不存在')
+    const result = await sysInfo.collectSystemInfo(conn)
+    getWindow()?.webContents.send('connections:changed')
+    return result
+  })
 
   // ---------- SFTP ----------
   ipcMain.handle('sftp:open', async (_e, sessionId: string) => {
