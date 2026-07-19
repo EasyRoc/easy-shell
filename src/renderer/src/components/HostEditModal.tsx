@@ -197,10 +197,12 @@ export default function HostEditModal(props: Props): JSX.Element {
                           placeholder="登录密码"
                         />
                       ) : (
-                        <input
+                        <textarea
+                          className="private-key-input"
                           value={privateKeyPath}
                           onChange={(e) => setPrivateKeyPath(e.target.value)}
                           placeholder="~/.ssh/id_rsa 或粘贴私钥内容"
+                          rows={privateKeyPath.includes('\n') ? 6 : 1}
                         />
                       )}
                     </div>

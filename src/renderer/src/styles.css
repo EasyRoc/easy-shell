@@ -651,6 +651,14 @@ tbody tr:hover {
   resize: vertical;
 }
 
+.form-control textarea.private-key-input {
+  min-height: 32px;
+  font-family: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
 .modal-footer {
   display: flex;
   align-items: center;
