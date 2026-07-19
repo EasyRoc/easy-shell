@@ -62,7 +62,7 @@ export default function HostEditModal(props: Props): JSX.Element {
     setTestMsg(
       r.ok
         ? { ok: true, text: `连接成功，延迟 ${r.latency} ms` }
-        : { ok: false, text: `连接失败：${r.error}` }
+        : { ok: false, text: `连接失败：${(r.error || '').slice(0, 120)}` }
     )
   }
 
@@ -164,7 +164,7 @@ export default function HostEditModal(props: Props): JSX.Element {
                       <div className="desc">
                         {authType === 'password'
                           ? '使用登录用户和密码完成认证。'
-                          : '使用私钥文件完成认证。'}
+                          : '填写私钥文件路径，或直接粘贴私钥内容。'}
                       </div>
                     </div>
                     <div className="form-control">
@@ -181,7 +181,7 @@ export default function HostEditModal(props: Props): JSX.Element {
                     <div className="form-label">
                       {authType === 'password'
                         ? '登录用户 / 登录密码'
-                        : '登录用户 / 私钥路径'}
+                        : '登录用户 / 私钥'}
                     </div>
                     <div className="form-control">
                       <input
@@ -200,7 +200,7 @@ export default function HostEditModal(props: Props): JSX.Element {
                         <input
                           value={privateKeyPath}
                           onChange={(e) => setPrivateKeyPath(e.target.value)}
-                          placeholder="~/.ssh/id_rsa"
+                          placeholder="~/.ssh/id_rsa 或粘贴私钥内容"
                         />
                       )}
                     </div>

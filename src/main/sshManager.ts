@@ -35,7 +35,13 @@ function buildConfig(conn: SSHConnection): ConnectConfig {
     keepaliveCountMax: 3
   }
   if (conn.authType === 'privateKey' && conn.privateKeyPath) {
-    cfg.privateKey = fs.readFileSync(conn.privateKeyPath)
+    const key = conn.privateKeyPath.trim()
+    // 支持直接粘贴私钥内容，也支持填文件路径
+    if (key.startsWith('-----BEGIN')) {
+      cfg.privateKey = key
+    } else {
+      cfg.privateKey = fs.readFileSync(key)
+    }
     if (conn.passphrase) cfg.passphrase = conn.passphrase
   } else {
     cfg.password = conn.password || ''

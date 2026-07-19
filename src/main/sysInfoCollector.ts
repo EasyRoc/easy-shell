@@ -130,7 +130,12 @@ function buildClientConfig(
     keepaliveCountMax: 3
   }
   if (conn.authType === 'privateKey' && conn.privateKeyPath) {
-    cfg.privateKey = fs.readFileSync(conn.privateKeyPath)
+    const key = conn.privateKeyPath.trim()
+    if (key.startsWith('-----BEGIN')) {
+      cfg.privateKey = key
+    } else {
+      cfg.privateKey = fs.readFileSync(key)
+    }
     if (conn.passphrase) cfg.passphrase = conn.passphrase
   } else {
     cfg.password = conn.password || ''
