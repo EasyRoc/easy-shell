@@ -179,7 +179,8 @@ textarea::placeholder {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
+  height: 40px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--border);
   -webkit-app-region: drag;
 }
@@ -698,10 +699,12 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px 10px;
+  height: 40px;
+  padding: 0 10px;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  -webkit-app-region: drag;
 }
 
 .term-tabs .spacer {
@@ -714,6 +717,7 @@ tbody tr:hover {
 }
 
 .term-tab {
+  -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -735,7 +739,7 @@ tbody tr:hover {
   color: var(--text);
   box-shadow:
     0 0 0 1px var(--green-dim),
-    0 2px 8px var(--green-dim);
+    0 0 6px var(--green-dim);
 }
 
 .term-tab .close {
@@ -1167,4 +1171,86 @@ tbody tr:hover {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* ---------- 标题栏平台留白 ---------- */
+:root[data-platform='darwin'] .topbar,
+:root[data-platform='darwin'] .term-tabs {
+  padding-left: 78px;
+}
+
+:root[data-platform='win32'] .topbar,
+:root[data-platform='win32'] .term-tabs {
+  padding-right: 138px;
+}
+
+/* ---------- 标签右键菜单 ---------- */
+.ctx-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+}
+
+.ctx-menu {
+  position: fixed;
+  z-index: 91;
+  width: 168px;
+  background: var(--bg-active);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 5px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.5);
+  animation: ctx-pop 0.16s ease-out;
+}
+
+@keyframes ctx-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--text);
+  cursor: default;
+  transition: background 0.1s;
+}
+
+.ctx-item .ctx-ic {
+  width: 15px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.ctx-item:hover {
+  background: var(--green-dim);
+}
+
+.ctx-item:hover .ctx-ic {
+  color: var(--green);
+}
+
+.ctx-item.danger:hover {
+  background: rgba(255, 69, 58, 0.16);
+}
+
+.ctx-item.danger:hover .ctx-ic {
+  color: var(--red);
+}
+
+.ctx-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 5px 7px;
 }

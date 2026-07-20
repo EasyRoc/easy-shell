@@ -4,6 +4,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { api } from '../api'
 import { getCurrentTheme, useTheme } from '../theme'
 import FilePanel from './FilePanel'
+import TabContextMenu from './TabContextMenu'
 
 export interface TermSession {
   key: string
@@ -19,12 +20,15 @@ interface Props {
   onClose: (key: string) => void
   onBack: () => void
   onStateChange: (key: string, status: TermSession['status']) => void
-  onDuplicate?: () => void
+  onDuplicateKey?: (key: string) => void
+  onCloseOthers?: (key: string) => void
+  onCloseAll?: () => void
 }
 
 export default function TerminalView(props: Props): JSX.Element {
   const [sessionIds, setSessionIds] = useState<Record<string, string>>({})
   const [showFiles, setShowFiles] = useState(false)
+  const [menu, setMenu] = useState<{ key: string; x: number; y: number } | null>(null)
 
   const activeSshId = props.activeKey ? sessionIds[props.activeKey] : null
 
@@ -39,6 +43,10 @@ export default function TerminalView(props: Props): JSX.Element {
             key={s.key}
             className={`term-tab ${props.activeKey === s.key ? 'active' : ''}`}
             onClick={() => props.onSwitch(s.key)}
+            onContextMenu={(e) => {
+              e.preventDefault()
+              setMenu({ key: s.key, x: e.clientX, y: e.clientY })
+            }}
           >
             <span
               className={`dot ${s.status === 'connected' ? '' : 'closed'}`}
@@ -56,11 +64,13 @@ export default function TerminalView(props: Props): JSX.Element {
           </div>
         ))}
         <div className="spacer" />
-        {props.activeKey && props.onDuplicate && (
+        {props.activeKey && props.onDuplicateKey && (
           <button
             className="back-btn"
             title="复制窗口"
-            onClick={props.onDuplicate}
+            onClick={() => {
+              if (props.activeKey) props.onDuplicateKey?.(props.activeKey)
+            }}
           >
             ⧉
           </button>
@@ -95,6 +105,17 @@ export default function TerminalView(props: Props): JSX.Element {
           />
         )}
       </div>
+      {menu && (
+        <TabContextMenu
+          x={menu.x}
+          y={menu.y}
+          onDuplicate={() => props.onDuplicateKey?.(menu.key)}
+          onClose={() => props.onClose(menu.key)}
+          onCloseOthers={() => props.onCloseOthers?.(menu.key)}
+          onCloseAll={() => props.onCloseAll?.()}
+          onDismiss={() => setMenu(null)}
+        />
+      )}
     </div>
   )
 }
