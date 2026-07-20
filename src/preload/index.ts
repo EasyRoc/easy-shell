@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
 import type { EasyShellApi, SSHConnection, SftpProgress } from '../shared/types'
 
 const api: EasyShellApi = {
+  platform: process.platform,
   connections: {
     list: () => ipcRenderer.invoke('connections:list'),
     create: (conn) => ipcRenderer.invoke('connections:create', conn),

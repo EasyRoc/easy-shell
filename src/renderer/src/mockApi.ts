@@ -151,6 +151,7 @@ export function createMockApi(): EasyShellApi {
     })
   }
   return {
+    platform: navigator.userAgent.includes('Mac') ? 'darwin' : 'win32',
     connections: {
       list: async () => load().connections,
       create: async (conn) => {

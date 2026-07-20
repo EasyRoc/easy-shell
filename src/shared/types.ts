@@ -60,6 +60,7 @@ export interface SftpProgress {
 
 // preload 暴露给渲染进程的 API 形状
 export interface EasyShellApi {
+  platform: string
   connections: {
     list(): Promise<SSHConnection[]>
     create(conn: Omit<SSHConnection, 'id' | 'createdAt'>): Promise<SSHConnection>

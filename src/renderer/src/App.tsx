@@ -41,6 +41,10 @@ export default function App(): JSX.Element {
     return off
   }, [reload])
 
+  useEffect(() => {
+    document.documentElement.dataset.platform = api.platform
+  }, [])
+
   // ---------- 连接管理 ----------
   const handleSave = async (
     data: Omit<SSHConnection, 'id' | 'createdAt'>,
