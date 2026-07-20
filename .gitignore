@@ -8,3 +8,4 @@ dist/
 *.tsbuildinfo
 release/
 out/
+.superpowers/
