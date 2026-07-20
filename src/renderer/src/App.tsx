@@ -126,6 +126,7 @@ export default function App(): JSX.Element {
     setSessions((prev) => [...prev, session])
     setActiveSession(key)
     setView('terminal')
+    void reload()
   }
 
   const gotoSession = (key: string): void => {

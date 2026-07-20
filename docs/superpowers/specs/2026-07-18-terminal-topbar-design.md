@@ -23,11 +23,11 @@
 
 改动文件：`src/renderer/src/styles.css`
 
-- `.term-tabs`：底色微调（与终端区拉开层次），padding 调整为 `8px 10px 6px`。
+- `.term-tabs`：底色微调（与终端区拉开层次），padding 调整为 `8px 10px 10px`（底部多留 2px 容纳激活卡辉光）。
 - `.term-tab`（卡片化）：
   - 背景：`var(--bg-hover)` 级别的卡片底色
   - 圆角：8px（不再是只在顶部的 `8px 8px 0 0`）
-  - 投影：`0 1px 3px rgba(0,0,0,.4)`
+  - 投影：`0 1px 3px rgba(0,0,0,.25)`
   - hover：底色变亮一档
 - `.term-tab.active`：
   - 背景：更亮一档
