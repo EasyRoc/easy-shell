@@ -179,7 +179,8 @@ textarea::placeholder {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
+  height: 40px;
+  padding: 0 14px;
   border-bottom: 1px solid var(--border);
   -webkit-app-region: drag;
 }
@@ -698,10 +699,12 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px 10px;
+  height: 40px;
+  padding: 0 10px;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  -webkit-app-region: drag;
 }
 
 .term-tabs .spacer {
@@ -714,6 +717,7 @@ tbody tr:hover {
 }
 
 .term-tab {
+  -webkit-app-region: no-drag;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -735,7 +739,7 @@ tbody tr:hover {
   color: var(--text);
   box-shadow:
     0 0 0 1px var(--green-dim),
-    0 2px 8px var(--green-dim);
+    0 0 6px var(--green-dim);
 }
 
 .term-tab .close {
@@ -1167,4 +1171,15 @@ tbody tr:hover {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* ---------- 标题栏平台留白 ---------- */
+:root[data-platform='darwin'] .topbar,
+:root[data-platform='darwin'] .term-tabs {
+  padding-left: 78px;
+}
+
+:root[data-platform='win32'] .topbar,
+:root[data-platform='win32'] .term-tabs {
+  padding-right: 138px;
 }
