@@ -19,8 +19,9 @@ export default function TabContextMenu(props: Props): JSX.Element {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') props.onDismiss()
     }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    // 用捕获阶段监听：终端聚焦时 xterm 会拦截（stopPropagation）keydown，冒泡级监听收不到 Esc
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
   }, [props.onDismiss])
 
   // 边界收拢：靠右/靠下时往回收，避免超出窗口
