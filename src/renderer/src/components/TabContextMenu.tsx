@@ -10,6 +10,7 @@ interface Props {
   onDismiss: () => void
 }
 
+// 需与 styles.css 中 .ctx-menu 的 width/实际渲染高度保持同步
 const MENU_W = 168
 const MENU_H = 150
 
@@ -41,7 +42,11 @@ export default function TabContextMenu(props: Props): JSX.Element {
           props.onDismiss()
         }}
       />
-      <div className="ctx-menu" style={{ left, top }}>
+      <div
+        className="ctx-menu"
+        style={{ left, top }}
+        onContextMenu={(e) => e.preventDefault()}
+      >
         <div className="ctx-item" onClick={click(props.onDuplicate)}>
           <span className="ctx-ic">⧉</span>复制窗口
         </div>
