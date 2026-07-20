@@ -19,6 +19,7 @@ interface Props {
   onClose: (key: string) => void
   onBack: () => void
   onStateChange: (key: string, status: TermSession['status']) => void
+  onDuplicate?: () => void
 }
 
 export default function TerminalView(props: Props): JSX.Element {
@@ -55,6 +56,15 @@ export default function TerminalView(props: Props): JSX.Element {
           </div>
         ))}
         <div className="spacer" />
+        {props.activeKey && props.onDuplicate && (
+          <button
+            className="back-btn"
+            title="复制窗口"
+            onClick={props.onDuplicate}
+          >
+            ⧉
+          </button>
+        )}
         {activeSshId && (
           <button
             className={`back-btn ${showFiles ? 'active' : ''}`}
