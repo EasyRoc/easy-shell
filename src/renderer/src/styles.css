@@ -698,7 +698,7 @@ tbody tr:hover {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px;
+  padding: 8px 10px 10px;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
@@ -746,7 +746,7 @@ tbody tr:hover {
 
 .term-tab .close:hover {
   color: var(--red);
-  background: var(--bg-active);
+  background: var(--bg-strong);
 }
 
 .term-tab .dot {
