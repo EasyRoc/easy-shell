@@ -697,8 +697,8 @@ tbody tr:hover {
 .term-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 10px 0;
+  gap: 6px;
+  padding: 8px 10px 10px;
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
@@ -718,19 +718,24 @@ tbody tr:hover {
   align-items: center;
   gap: 8px;
   padding: 7px 12px;
-  border-radius: 8px 8px 0 0;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
   color: var(--text-dim);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .term-tab:hover {
-  background: var(--bg-hover);
+  background: var(--bg-active);
 }
 
 .term-tab.active {
-  background: var(--bg);
+  background: var(--bg-active);
   color: var(--text);
+  box-shadow:
+    0 0 0 1px var(--green-dim),
+    0 2px 8px var(--green-dim);
 }
 
 .term-tab .close {
@@ -741,7 +746,7 @@ tbody tr:hover {
 
 .term-tab .close:hover {
   color: var(--red);
-  background: var(--bg-active);
+  background: var(--bg-strong);
 }
 
 .term-tab .dot {

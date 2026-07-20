@@ -113,6 +113,22 @@ export default function App(): JSX.Element {
     }
   }
 
+  const handleDuplicateSession = (): void => {
+    const src = sessions.find((s) => s.key === activeSession)
+    if (!src) return
+    const key = `${src.connectionId}-${Date.now()}`
+    const session: TermSession = {
+      key,
+      connectionId: src.connectionId,
+      name: src.name,
+      status: 'connecting'
+    }
+    setSessions((prev) => [...prev, session])
+    setActiveSession(key)
+    setView('terminal')
+    void reload()
+  }
+
   const gotoSession = (key: string): void => {
     setActiveSession(key)
     setView('terminal')
@@ -224,6 +240,7 @@ export default function App(): JSX.Element {
             onClose={handleCloseSession}
             onBack={() => setView('list')}
             onStateChange={handleSessionState}
+            onDuplicate={handleDuplicateSession}
           />
         </div>
       )}
