@@ -117,20 +117,37 @@ export default function App(): JSX.Element {
     }
   }
 
-  const handleDuplicateSession = (): void => {
-    const src = sessions.find((s) => s.key === activeSession)
+  const handleDuplicateSession = (key: string): void => {
+    const src = sessions.find((s) => s.key === key)
     if (!src) return
-    const key = `${src.connectionId}-${Date.now()}`
+    const newKey = `${src.connectionId}-${Date.now()}`
     const session: TermSession = {
-      key,
+      key: newKey,
       connectionId: src.connectionId,
       name: src.name,
       status: 'connecting'
     }
     setSessions((prev) => [...prev, session])
-    setActiveSession(key)
+    setActiveSession(newKey)
     setView('terminal')
     void reload()
+  }
+
+  const handleCloseOthers = (key: string): void => {
+    const kept = sessions.filter((s) => s.key === key)
+    setSessions(kept)
+    if (kept.length > 0) {
+      setActiveSession(key)
+    } else {
+      setActiveSession(null)
+      setView('list')
+    }
+  }
+
+  const handleCloseAll = (): void => {
+    setSessions([])
+    setActiveSession(null)
+    setView('list')
   }
 
   const gotoSession = (key: string): void => {
@@ -244,7 +261,9 @@ export default function App(): JSX.Element {
             onClose={handleCloseSession}
             onBack={() => setView('list')}
             onStateChange={handleSessionState}
-            onDuplicate={handleDuplicateSession}
+            onDuplicateKey={handleDuplicateSession}
+            onCloseOthers={handleCloseOthers}
+            onCloseAll={handleCloseAll}
           />
         </div>
       )}
