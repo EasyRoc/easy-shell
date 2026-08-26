@@ -117,9 +117,9 @@ export default function App(): JSX.Element {
     }
   }
 
-  const handleDuplicateSession = (key: string): void => {
+  const handleDuplicateSession = (key: string): string | null => {
     const src = sessions.find((s) => s.key === key)
-    if (!src) return
+    if (!src) return null
     const newKey = `${src.connectionId}-${Date.now()}`
     const session: TermSession = {
       key: newKey,
@@ -131,6 +131,7 @@ export default function App(): JSX.Element {
     setActiveSession(newKey)
     setView('terminal')
     void reload()
+    return newKey
   }
 
   const handleCloseOthers = (key: string): void => {

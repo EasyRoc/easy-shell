@@ -3,7 +3,11 @@ import { useEffect } from 'react'
 interface Props {
   x: number
   y: number
+  splitActive?: boolean
   onDuplicate: () => void
+  onSplitHorizontal: () => void
+  onSplitVertical: () => void
+  onExitSplit?: () => void
   onClose: () => void
   onCloseOthers: () => void
   onCloseAll: () => void
@@ -12,7 +16,7 @@ interface Props {
 
 // 需与 styles.css 中 .ctx-menu 的 width/实际渲染高度保持同步
 const MENU_W = 168
-const MENU_H = 150
+const MENU_H = 228
 
 export default function TabContextMenu(props: Props): JSX.Element {
   useEffect(() => {
@@ -51,6 +55,17 @@ export default function TabContextMenu(props: Props): JSX.Element {
         <div className="ctx-item" onClick={click(props.onDuplicate)}>
           <span className="ctx-ic">⧉</span>复制窗口
         </div>
+        <div className="ctx-item" onClick={click(props.onSplitHorizontal)}>
+          <span className="ctx-ic">▥</span>向右分屏
+        </div>
+        <div className="ctx-item" onClick={click(props.onSplitVertical)}>
+          <span className="ctx-ic">▤</span>向下分屏
+        </div>
+        {props.splitActive && props.onExitSplit && (
+          <div className="ctx-item" onClick={click(props.onExitSplit)}>
+            <span className="ctx-ic">⊟</span>退出分屏
+          </div>
+        )}
         <div className="ctx-sep" />
         <div className="ctx-item" onClick={click(props.onClose)}>
           <span className="ctx-ic">×</span>关闭

@@ -10,7 +10,15 @@ interface Session {
   stream: NodeJS.ReadWriteStream | null
 }
 
+interface PooledConnection {
+  client: Client
+  sessionIds: Set<string>
+  ready: boolean
+  readyPromise: Promise<void>
+}
+
 const sessions = new Map<string, Session>()
+const pools = new Map<string, PooledConnection>()
 
 // 输出/关闭回调由 ipc 层注入，用来把数据推给渲染进程
 let outputSink: (sessionId: string, data: string) => void = () => {}
@@ -49,65 +57,140 @@ function buildConfig(conn: SSHConnection): ConnectConfig {
   return cfg
 }
 
+function destroyPool(connectionId: string): void {
+  const pool = pools.get(connectionId)
+  if (!pool) return
+
+  for (const sessionId of [...pool.sessionIds]) {
+    const s = sessions.get(sessionId)
+    if (s?.stream) {
+      s.stream.removeAllListeners('close')
+      try {
+        s.stream.close()
+      } catch {
+        /* ignore */
+      }
+    }
+    finalizeSession(sessionId)
+  }
+
+  try {
+    pool.client.end()
+  } catch {
+    /* ignore */
+  }
+  pools.delete(connectionId)
+}
+
+function acquireClient(conn: SSHConnection): Promise<Client> {
+  let pool = pools.get(conn.id)
+  if (!pool) {
+    const client = new Client()
+    let readyResolve!: () => void
+    let readyReject!: (err: Error) => void
+    const readyPromise = new Promise<void>((resolve, reject) => {
+      readyResolve = resolve
+      readyReject = reject
+    })
+
+    pool = {
+      client,
+      sessionIds: new Set(),
+      ready: false,
+      readyPromise
+    }
+    pools.set(conn.id, pool)
+
+    client.once('ready', () => {
+      pool!.ready = true
+      readyResolve()
+    })
+    client.once('error', (err) => {
+      readyReject(new Error(err.message || '连接失败'))
+      destroyPool(conn.id)
+    })
+    client.once('close', () => {
+      destroyPool(conn.id)
+    })
+
+    try {
+      client.connect(buildConfig(conn))
+    } catch (e) {
+      const err = e instanceof Error ? e : new Error(String(e))
+      readyReject(err)
+      pools.delete(conn.id)
+      return Promise.reject(err)
+    }
+  }
+
+  return pool.readyPromise.then(() => pool!.client)
+}
+
 export function connect(
   conn: SSHConnection,
   cols: number,
   rows: number
 ): Promise<{ sessionId: string }> {
   return new Promise((resolve, reject) => {
-    const client = new Client()
     const sessionId = crypto.randomUUID()
-    const session: Session = {
-      id: sessionId,
-      connectionId: conn.id,
-      client,
-      stream: null
-    }
 
-    const onReady = (): void => {
-      client.shell(
-        { term: 'xterm-256color', cols: cols || 80, rows: rows || 24 },
-        (err, stream) => {
-          if (err) {
-            client.end()
-            return reject(new Error('打开终端失败: ' + err.message))
-          }
-          session.stream = stream
-          sessions.set(sessionId, session)
-
-          stream.on('data', (data: Buffer) => {
-            outputSink(sessionId, data.toString('utf-8'))
-          })
-          stream.stderr?.on('data', (data: Buffer) => {
-            outputSink(sessionId, data.toString('utf-8'))
-          })
-          stream.on('close', () => {
-            cleanup(sessionId)
-            closeSink(sessionId)
-          })
-          resolve({ sessionId })
+    acquireClient(conn)
+      .then((client) => {
+        const pool = pools.get(conn.id)
+        if (!pool) {
+          return reject(new Error('连接池不存在'))
         }
-      )
-    }
 
-    client.once('ready', onReady)
-    client.once('error', (err) => {
-      cleanup(sessionId)
-      reject(new Error(err.message || '连接失败'))
-    })
-    client.once('close', () => {
-      if (sessions.has(sessionId)) {
-        cleanup(sessionId)
-        closeSink(sessionId)
-      }
-    })
+        client.shell(
+          { term: 'xterm-256color', cols: cols || 80, rows: rows || 24 },
+          (err, stream) => {
+            if (err) {
+              return reject(new Error('打开终端失败: ' + err.message))
+            }
 
-    try {
-      client.connect(buildConfig(conn))
-    } catch (e) {
-      reject(e instanceof Error ? e : new Error(String(e)))
-    }
+            const session: Session = {
+              id: sessionId,
+              connectionId: conn.id,
+              client,
+              stream
+            }
+            sessions.set(sessionId, session)
+            pool.sessionIds.add(sessionId)
+
+            stream.on('data', (data: Buffer) => {
+              outputSink(sessionId, data.toString('utf-8'))
+            })
+            stream.stderr?.on('data', (data: Buffer) => {
+              outputSink(sessionId, data.toString('utf-8'))
+            })
+            stream.on('close', () => {
+              finalizeSession(sessionId)
+            })
+            resolve({ sessionId })
+          }
+        )
+      })
+      .catch(reject)
   })
+}
+
+function finalizeSession(sessionId: string): void {
+  const s = sessions.get(sessionId)
+  if (!s) return
+
+  const pool = pools.get(s.connectionId)
+  cleanup(sessionId)
+  pool?.sessionIds.delete(sessionId)
+  closeSink(sessionId)
+
+  if (pool && pool.sessionIds.size === 0) {
+    try {
+      s.client.end()
+    } catch {
+      /* ignore */
+    }
+    pools.delete(s.connectionId)
+  }
 }
 
 export function input(sessionId: string, data: string): void {
@@ -126,19 +209,17 @@ export function resize(sessionId: string, cols: number, rows: number): void {
 
 export function disconnect(sessionId: string): void {
   const s = sessions.get(sessionId)
-  if (s) {
+  if (!s) return
+
+  if (s.stream) {
+    s.stream.removeAllListeners('close')
     try {
-      s.stream?.end()
+      s.stream.close()
     } catch {
       /* ignore */
     }
-    try {
-      s.client.end()
-    } catch {
-      /* ignore */
-    }
-    cleanup(sessionId)
   }
+  finalizeSession(sessionId)
 }
 
 function cleanup(sessionId: string): void {
@@ -147,6 +228,7 @@ function cleanup(sessionId: string): void {
 
 export function disconnectAll(): void {
   for (const id of [...sessions.keys()]) disconnect(id)
+  pools.clear()
 }
 
 export function getClient(sessionId: string): Client | null {
@@ -154,6 +236,8 @@ export function getClient(sessionId: string): Client | null {
 }
 
 export function getClientByConnectionId(connectionId: string): Client | null {
+  const pool = pools.get(connectionId)
+  if (pool?.ready) return pool.client
   for (const s of sessions.values()) {
     if (s.connectionId === connectionId) return s.client
   }

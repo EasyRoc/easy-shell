@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { api } from '../api'
@@ -13,6 +13,17 @@ export interface TermSession {
   status: 'connecting' | 'connected' | 'closed' | 'error'
 }
 
+type SplitDirection = 'horizontal' | 'vertical'
+type FocusedPane = 'primary' | 'secondary'
+
+interface SplitLayout {
+  direction: SplitDirection
+  ratio: number
+  primaryKey: string
+  secondaryKey: string
+  focusedPane: FocusedPane
+}
+
 interface Props {
   sessions: TermSession[]
   activeKey: string | null
@@ -20,7 +31,7 @@ interface Props {
   onClose: (key: string) => void
   onBack: () => void
   onStateChange: (key: string, status: TermSession['status']) => void
-  onDuplicateKey?: (key: string) => void
+  onDuplicateKey?: (key: string) => string | null
   onCloseOthers?: (key: string) => void
   onCloseAll?: () => void
 }
@@ -28,9 +39,151 @@ interface Props {
 export default function TerminalView(props: Props): JSX.Element {
   const [sessionIds, setSessionIds] = useState<Record<string, string>>({})
   const [showFiles, setShowFiles] = useState(false)
-  const [menu, setMenu] = useState<{ key: string; x: number; y: number } | null>(null)
+  const [menu, setMenu] = useState<{ key: string; x: number; y: number } | null>(
+    null
+  )
+  const [splitLayout, setSplitLayout] = useState<SplitLayout | null>(null)
+  const splitRef = useRef<HTMLDivElement>(null)
+  const dragRef = useRef<{ startPos: number; startRatio: number } | null>(null)
 
-  const activeSshId = props.activeKey ? sessionIds[props.activeKey] : null
+  const focusedSessionKey = splitLayout
+    ? splitLayout.focusedPane === 'primary'
+      ? splitLayout.primaryKey
+      : splitLayout.secondaryKey
+    : props.activeKey
+
+  const activeSshId = focusedSessionKey ? sessionIds[focusedSessionKey] : null
+
+  // 会话关闭后自动收拢分屏
+  useEffect(() => {
+    if (!splitLayout) return
+    const { primaryKey, secondaryKey } = splitLayout
+    const hasPrimary = props.sessions.some((s) => s.key === primaryKey)
+    const hasSecondary = props.sessions.some((s) => s.key === secondaryKey)
+
+    if (!hasPrimary && !hasSecondary) {
+      setSplitLayout(null)
+      return
+    }
+    if (!hasPrimary) {
+      props.onSwitch(secondaryKey)
+      setSplitLayout(null)
+      return
+    }
+    if (!hasSecondary) {
+      props.onSwitch(primaryKey)
+      setSplitLayout(null)
+    }
+  }, [props.sessions, splitLayout, props.onSwitch])
+
+  const handleTabSwitch = (key: string): void => {
+    props.onSwitch(key)
+    setSplitLayout((prev) => {
+      if (!prev) return prev
+      if (key === prev.primaryKey) {
+        return { ...prev, focusedPane: 'primary' }
+      }
+      if (key === prev.secondaryKey) {
+        return { ...prev, focusedPane: 'secondary' }
+      }
+      if (prev.focusedPane === 'primary') {
+        return { ...prev, primaryKey: key }
+      }
+      return { ...prev, secondaryKey: key }
+    })
+  }
+
+  const startSplit = (
+    sourceKey: string,
+    direction: SplitDirection
+  ): void => {
+    const newKey = props.onDuplicateKey?.(sourceKey)
+    if (!newKey) return
+    setSplitLayout({
+      direction,
+      ratio: 0.5,
+      primaryKey: sourceKey,
+      secondaryKey: newKey,
+      focusedPane: 'secondary'
+    })
+    props.onSwitch(newKey)
+  }
+
+  const exitSplit = (): void => {
+    if (!splitLayout) return
+    const keepKey =
+      splitLayout.focusedPane === 'primary'
+        ? splitLayout.primaryKey
+        : splitLayout.secondaryKey
+    props.onSwitch(keepKey)
+    setSplitLayout(null)
+  }
+
+  const onDividerPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!splitLayout) return
+      e.preventDefault()
+      e.currentTarget.setPointerCapture(e.pointerId)
+      dragRef.current = {
+        startPos: splitLayout.direction === 'horizontal' ? e.clientX : e.clientY,
+        startRatio: splitLayout.ratio
+      }
+    },
+    [splitLayout]
+  )
+
+  const onDividerPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      const drag = dragRef.current
+      const container = splitRef.current
+      if (!drag || !container || !splitLayout) return
+
+      const rect = container.getBoundingClientRect()
+      const size =
+        splitLayout.direction === 'horizontal' ? rect.width : rect.height
+      if (size <= 0) return
+
+      const delta =
+        (splitLayout.direction === 'horizontal' ? e.clientX : e.clientY) -
+        drag.startPos
+      const next = drag.startRatio + delta / size
+      setSplitLayout((prev) =>
+        prev ? { ...prev, ratio: Math.min(0.85, Math.max(0.15, next)) } : prev
+      )
+    },
+    [splitLayout]
+  )
+
+  const onDividerPointerUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      dragRef.current = null
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    },
+    []
+  )
+
+  const getSlotLayout = (
+    sessionKey: string
+  ): 'hidden' | 'full' | 'primary' | 'secondary' => {
+    if (!splitLayout) {
+      return sessionKey === props.activeKey ? 'full' : 'hidden'
+    }
+    if (sessionKey === splitLayout.primaryKey) return 'primary'
+    if (sessionKey === splitLayout.secondaryKey) return 'secondary'
+    return 'hidden'
+  }
+
+  const focusPane = (pane: FocusedPane, sessionKey: string): void => {
+    props.onSwitch(sessionKey)
+    setSplitLayout((prev) => (prev ? { ...prev, focusedPane: pane } : prev))
+  }
+
+  const bodiesClass = splitLayout
+    ? `term-bodies split-${splitLayout.direction}`
+    : 'term-bodies'
+  const bodiesStyle = splitLayout
+    ? ({ '--split-ratio': `${splitLayout.ratio * 100}%` } as React.CSSProperties)
+    : undefined
 
   return (
     <div className="terminal-page">
@@ -42,7 +195,7 @@ export default function TerminalView(props: Props): JSX.Element {
           <div
             key={s.key}
             className={`term-tab ${props.activeKey === s.key ? 'active' : ''}`}
-            onClick={() => props.onSwitch(s.key)}
+            onClick={() => handleTabSwitch(s.key)}
             onContextMenu={(e) => {
               e.preventDefault()
               setMenu({ key: s.key, x: e.clientX, y: e.clientY })
@@ -75,6 +228,29 @@ export default function TerminalView(props: Props): JSX.Element {
             ⧉
           </button>
         )}
+        {props.activeKey && props.onDuplicateKey && (
+          <>
+            <button
+              className="back-btn"
+              title="向右分屏"
+              onClick={() => startSplit(props.activeKey!, 'horizontal')}
+            >
+              ▥
+            </button>
+            <button
+              className="back-btn"
+              title="向下分屏"
+              onClick={() => startSplit(props.activeKey!, 'vertical')}
+            >
+              ▤
+            </button>
+          </>
+        )}
+        {splitLayout && (
+          <button className="back-btn" title="退出分屏" onClick={exitSplit}>
+            ⊟
+          </button>
+        )}
         {activeSshId && (
           <button
             className={`back-btn ${showFiles ? 'active' : ''}`}
@@ -85,18 +261,47 @@ export default function TerminalView(props: Props): JSX.Element {
         )}
       </div>
       <div className="term-main">
-        <div className="term-bodies">
-          {props.sessions.map((s) => (
-            <TermBody
-              key={s.key}
-              session={s}
-              active={props.activeKey === s.key}
-              onStateChange={props.onStateChange}
-              onSessionId={(key, id) =>
-                setSessionIds((prev) => ({ ...prev, [key]: id }))
-              }
+        <div ref={splitRef} className={bodiesClass} style={bodiesStyle}>
+          {props.sessions.map((s) => {
+            const slot = getSlotLayout(s.key)
+            const focused = splitLayout
+              ? props.activeKey === s.key &&
+                ((slot === 'primary' &&
+                  splitLayout.focusedPane === 'primary') ||
+                  (slot === 'secondary' &&
+                    splitLayout.focusedPane === 'secondary'))
+              : props.activeKey === s.key
+
+            return (
+              <div
+                key={s.key}
+                className={`term-slot slot-${slot} ${focused ? 'focused' : ''}`}
+                onPointerDown={() => {
+                  if (slot === 'primary') focusPane('primary', s.key)
+                  if (slot === 'secondary') focusPane('secondary', s.key)
+                }}
+              >
+                <TermBody
+                  session={s}
+                  visible={slot !== 'hidden'}
+                  focused={focused}
+                  onStateChange={props.onStateChange}
+                  onSessionId={(key, id) =>
+                    setSessionIds((prev) => ({ ...prev, [key]: id }))
+                  }
+                />
+              </div>
+            )
+          })}
+          {splitLayout && (
+            <div
+              className="term-split-divider"
+              onPointerDown={onDividerPointerDown}
+              onPointerMove={onDividerPointerMove}
+              onPointerUp={onDividerPointerUp}
+              onPointerCancel={onDividerPointerUp}
             />
-          ))}
+          )}
         </div>
         {showFiles && activeSshId && (
           <FilePanel
@@ -109,7 +314,11 @@ export default function TerminalView(props: Props): JSX.Element {
         <TabContextMenu
           x={menu.x}
           y={menu.y}
+          splitActive={!!splitLayout}
           onDuplicate={() => props.onDuplicateKey?.(menu.key)}
+          onSplitHorizontal={() => startSplit(menu.key, 'horizontal')}
+          onSplitVertical={() => startSplit(menu.key, 'vertical')}
+          onExitSplit={splitLayout ? exitSplit : undefined}
           onClose={() => props.onClose(menu.key)}
           onCloseOthers={() => props.onCloseOthers?.(menu.key)}
           onCloseAll={() => props.onCloseAll?.()}
@@ -122,7 +331,8 @@ export default function TerminalView(props: Props): JSX.Element {
 
 function TermBody(props: {
   session: TermSession
-  active: boolean
+  visible: boolean
+  focused: boolean
   onStateChange: (key: string, status: TermSession['status']) => void
   onSessionId: (key: string, sessionId: string) => void
 }): JSX.Element {
@@ -130,7 +340,12 @@ function TermBody(props: {
   const termRef = useRef<Terminal | null>(null)
   const fitRef = useRef<FitAddon | null>(null)
   const sessionIdRef = useRef<string | null>(null)
+  const visibleRef = useRef(props.visible)
   const { session, onStateChange } = props
+
+  useEffect(() => {
+    visibleRef.current = props.visible
+  }, [props.visible])
 
   // 初始化终端 + 建立 SSH 连接（每个会话一次）
   useEffect(() => {
@@ -185,6 +400,7 @@ function TermBody(props: {
     })
 
     const observer = new ResizeObserver(() => {
+      if (!visibleRef.current) return
       try {
         fit.fit()
         if (sessionIdRef.current) {
@@ -208,13 +424,13 @@ function TermBody(props: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session.key])
 
-  // 切换标签时重新适配尺寸
+  // 显示/聚焦变化时重新适配尺寸
   useEffect(() => {
-    if (props.active && fitRef.current && termRef.current) {
+    if (props.visible && fitRef.current && termRef.current) {
       setTimeout(() => {
         try {
           fitRef.current?.fit()
-          termRef.current?.focus()
+          if (props.focused) termRef.current?.focus()
           if (sessionIdRef.current && termRef.current) {
             api.ssh.resize(
               sessionIdRef.current,
@@ -227,7 +443,7 @@ function TermBody(props: {
         }
       }, 0)
     }
-  }, [props.active])
+  }, [props.visible, props.focused])
 
   // 主题切换时实时更新终端配色
   const theme = useTheme()
@@ -238,9 +454,6 @@ function TermBody(props: {
   }, [theme])
 
   return (
-    <div
-      ref={containerRef}
-      className={`term-body ${props.active ? 'active' : ''}`}
-    />
+    <div ref={containerRef} className="term-body" />
   )
 }

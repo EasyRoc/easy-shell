@@ -597,9 +597,143 @@ tbody tr:hover {
 .modal-form {
   flex: 1;
   overflow-y: auto;
-  padding: 18px 22px;
+  padding: 20px 24px;
+  display: flex;
+  justify-content: center;
 }
 
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 560px;
+  align-self: flex-start;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-section-title {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.form-field-wide {
+  grid-column: 1 / -1;
+}
+
+.form-field-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.3;
+}
+
+.form-field-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 1.4;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.input-group input {
+  flex: 1;
+  min-width: 0;
+}
+
+.input-group .input-port {
+  flex: 0 0 88px;
+  width: 88px;
+  text-align: center;
+}
+
+.input-with-unit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-with-unit input {
+  flex: 1;
+  min-width: 0;
+}
+
+.input-unit {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.form-field textarea.remark-input {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.form-field textarea.private-key-input {
+  min-height: 72px;
+  font-family: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.input-password-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-password-wrap input {
+  padding-right: 52px;
+}
+
+.input-visibility-btn {
+  position: absolute;
+  right: 4px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1;
+}
+
+.input-visibility-btn:hover {
+  color: var(--text);
+  background: var(--bg-hover);
+}
+
+/* 旧版表单布局（保留兼容） */
 .form-card {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -776,16 +910,74 @@ tbody tr:hover {
   position: relative;
 }
 
+.term-bodies.split-horizontal {
+  display: grid;
+  grid-template-columns: var(--split-ratio, 50%) 4px 1fr;
+  grid-template-rows: 1fr;
+  grid-template-areas: 'primary divider secondary';
+}
+
+.term-bodies.split-vertical {
+  display: grid;
+  grid-template-rows: var(--split-ratio, 50%) 4px 1fr;
+  grid-template-columns: 1fr;
+  grid-template-areas: 'primary' 'divider' 'secondary';
+}
+
+.term-slot {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--term-bg);
+}
+
+.term-slot.slot-full {
+  position: absolute;
+  inset: 0;
+}
+
+.term-slot.slot-primary {
+  grid-area: primary;
+}
+
+.term-slot.slot-secondary {
+  grid-area: secondary;
+}
+
+.term-slot.slot-hidden {
+  display: none;
+}
+
+.term-slot.focused {
+  box-shadow: inset 0 0 0 1px var(--green-dim);
+}
+
+.term-split-divider {
+  grid-area: divider;
+  background: var(--border);
+  touch-action: none;
+  user-select: none;
+  z-index: 2;
+}
+
+.term-bodies.split-horizontal .term-split-divider {
+  cursor: col-resize;
+}
+
+.term-bodies.split-vertical .term-split-divider {
+  cursor: row-resize;
+}
+
+.term-split-divider:hover {
+  background: var(--green-dim);
+}
+
 .term-body {
   position: absolute;
   inset: 0;
   padding: 6px;
   background: var(--term-bg);
-  display: none;
-}
-
-.term-body.active {
-  display: block;
 }
 
 .term-body .xterm {

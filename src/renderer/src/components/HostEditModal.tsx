@@ -27,6 +27,7 @@ export default function HostEditModal(props: Props): JSX.Element {
   const [password, setPassword] = useState(c?.password ?? '')
   const [privateKeyPath, setPrivateKeyPath] = useState(c?.privateKeyPath ?? '')
   const [passphrase, setPassphrase] = useState(c?.passphrase ?? '')
+  const [showPassphrase, setShowPassphrase] = useState(false)
   const [remark, setRemark] = useState(c?.remark ?? '')
   const [timeout, setTimeout_] = useState(String(c?.timeout ?? 10000))
   const [heartbeat, setHeartbeat] = useState(String(c?.heartbeat ?? 5000))
@@ -108,21 +109,20 @@ export default function HostEditModal(props: Props): JSX.Element {
           </div>
           <div className="modal-form">
             {tab === 'basic' && (
-              <>
-                <div className="form-card">
-                  <div className="form-row">
-                    <div className="form-label">名称</div>
-                    <div className="form-control">
+              <div className="form-stack">
+                <section className="form-section">
+                  <h3 className="form-section-title">连接</h3>
+                  <div className="form-grid">
+                    <label className="form-field">
+                      <span className="form-field-label">名称</span>
                       <input
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="我的服务器"
                       />
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-label">分组</div>
-                    <div className="form-control">
+                    </label>
+                    <label className="form-field">
+                      <span className="form-field-label">分组</span>
                       <select
                         value={groupId}
                         onChange={(e) => setGroupId(e.target.value)}
@@ -134,40 +134,33 @@ export default function HostEditModal(props: Props): JSX.Element {
                           </option>
                         ))}
                       </select>
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-label">
-                      地址
-                      <div className="desc">填写目标 SSH 地址和端口。</div>
-                    </div>
-                    <div className="form-control">
-                      <input
-                        value={host}
-                        onChange={(e) => setHost(e.target.value)}
-                        placeholder="192.168.1.1"
-                      />
-                      <input
-                        className="narrow"
-                        value={port}
-                        onChange={(e) => setPort(e.target.value)}
-                        placeholder="22"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="form-card">
-                  <div className="form-row">
-                    <div className="form-label">
-                      验证方式
-                      <div className="desc">
-                        {authType === 'password'
-                          ? '使用登录用户和密码完成认证。'
-                          : '填写私钥文件路径，或直接粘贴私钥内容。'}
+                    </label>
+                    <label className="form-field form-field-wide">
+                      <span className="form-field-label">地址</span>
+                      <div className="input-group">
+                        <input
+                          value={host}
+                          onChange={(e) => setHost(e.target.value)}
+                          placeholder="192.168.1.1 或 example.com"
+                        />
+                        <input
+                          className="input-port"
+                          value={port}
+                          onChange={(e) => setPort(e.target.value)}
+                          placeholder="22"
+                          inputMode="numeric"
+                        />
                       </div>
-                    </div>
-                    <div className="form-control">
+                      <span className="form-field-hint">目标 SSH 主机地址与端口</span>
+                    </label>
+                  </div>
+                </section>
+
+                <section className="form-section">
+                  <h3 className="form-section-title">认证</h3>
+                  <div className="form-grid">
+                    <label className="form-field">
+                      <span className="form-field-label">验证方式</span>
                       <select
                         value={authType}
                         onChange={(e) => setAuthType(e.target.value as AuthType)}
@@ -175,87 +168,113 @@ export default function HostEditModal(props: Props): JSX.Element {
                         <option value="password">密码</option>
                         <option value="privateKey">私钥</option>
                       </select>
-                    </div>
-                  </div>
-                  <div className="form-row">
-                    <div className="form-label">
-                      {authType === 'password'
-                        ? '登录用户 / 登录密码'
-                        : '登录用户 / 私钥'}
-                    </div>
-                    <div className="form-control">
+                    </label>
+                    <label className="form-field">
+                      <span className="form-field-label">登录用户</span>
                       <input
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         placeholder="root"
                       />
-                      {authType === 'password' ? (
+                    </label>
+                    {authType === 'password' ? (
+                      <label className="form-field form-field-wide">
+                        <span className="form-field-label">登录密码</span>
                         <input
                           type="password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           placeholder="登录密码"
                         />
-                      ) : (
-                        <textarea
-                          className="private-key-input"
-                          value={privateKeyPath}
-                          onChange={(e) => setPrivateKeyPath(e.target.value)}
-                          placeholder="~/.ssh/id_rsa 或粘贴私钥内容"
-                          rows={privateKeyPath.includes('\n') ? 6 : 1}
-                        />
-                      )}
-                    </div>
+                        <span className="form-field-hint">
+                          使用用户名和密码完成 SSH 认证
+                        </span>
+                      </label>
+                    ) : (
+                      <>
+                        <label className="form-field form-field-wide">
+                          <span className="form-field-label">私钥</span>
+                          <textarea
+                            className="private-key-input"
+                            value={privateKeyPath}
+                            onChange={(e) => setPrivateKeyPath(e.target.value)}
+                            placeholder="~/.ssh/id_rsa 或粘贴私钥内容"
+                            rows={privateKeyPath.includes('\n') ? 6 : 3}
+                          />
+                          <span className="form-field-hint">
+                            支持文件路径，或直接粘贴 PEM 私钥内容
+                          </span>
+                        </label>
+                        <label className="form-field form-field-wide">
+                          <span className="form-field-label">私钥口令</span>
+                          <div className="input-password-wrap">
+                            <input
+                              type={showPassphrase ? 'text' : 'password'}
+                              value={passphrase}
+                              onChange={(e) => setPassphrase(e.target.value)}
+                              placeholder="私钥有密码时填写，可留空"
+                            />
+                            <button
+                              type="button"
+                              className="input-visibility-btn"
+                              title={showPassphrase ? '隐藏口令' : '显示口令'}
+                              aria-label={showPassphrase ? '隐藏口令' : '显示口令'}
+                              onClick={() => setShowPassphrase((v) => !v)}
+                            >
+                              {showPassphrase ? '隐藏' : '显示'}
+                            </button>
+                          </div>
+                        </label>
+                      </>
+                    )}
                   </div>
-                  {authType === 'privateKey' && (
-                    <div className="form-row">
-                      <div className="form-label">私钥口令</div>
-                      <div className="form-control">
-                        <input
-                          type="password"
-                          value={passphrase}
-                          onChange={(e) => setPassphrase(e.target.value)}
-                          placeholder="私钥有密码时填写，可留空"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
+                </section>
 
-                <div className="form-card">
-                  <div className="form-row">
-                    <div className="form-label">主机备注</div>
-                    <div className="form-control">
-                      <textarea
-                        value={remark}
-                        onChange={(e) => setRemark(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </>
+                <section className="form-section">
+                  <h3 className="form-section-title">备注</h3>
+                  <label className="form-field form-field-wide">
+                    <span className="form-field-label">主机备注</span>
+                    <textarea
+                      className="remark-input"
+                      value={remark}
+                      onChange={(e) => setRemark(e.target.value)}
+                      placeholder="可选，记录用途、环境等信息"
+                      rows={3}
+                    />
+                  </label>
+                </section>
+              </div>
             )}
 
             {tab === 'advanced' && (
-              <div className="form-card">
-                <div className="form-row">
-                  <div className="form-label">超时时间（毫秒）</div>
-                  <div className="form-control">
-                    <input
-                      value={timeout}
-                      onChange={(e) => setTimeout_(e.target.value)}
-                    />
+              <div className="form-stack">
+                <section className="form-section">
+                  <h3 className="form-section-title">连接参数</h3>
+                  <div className="form-grid">
+                    <label className="form-field">
+                      <span className="form-field-label">超时时间</span>
+                      <div className="input-with-unit">
+                        <input
+                          value={timeout}
+                          onChange={(e) => setTimeout_(e.target.value)}
+                          inputMode="numeric"
+                        />
+                        <span className="input-unit">毫秒</span>
+                      </div>
+                    </label>
+                    <label className="form-field">
+                      <span className="form-field-label">心跳间隔</span>
+                      <div className="input-with-unit">
+                        <input
+                          value={heartbeat}
+                          onChange={(e) => setHeartbeat(e.target.value)}
+                          inputMode="numeric"
+                        />
+                        <span className="input-unit">毫秒</span>
+                      </div>
+                    </label>
                   </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-label">心跳时间（毫秒）</div>
-                  <div className="form-control">
-                    <input
-                      value={heartbeat}
-                      onChange={(e) => setHeartbeat(e.target.value)}
-                    />
-                  </div>
-                </div>
+                </section>
               </div>
             )}
           </div>
