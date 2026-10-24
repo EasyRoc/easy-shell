@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api'
+import ConfirmModal from './ConfirmModal'
 import type { SftpFileEntry, SftpProgress } from '../../../shared/types'
 
 interface Props {
@@ -23,6 +24,18 @@ function formatTime(sec: number): string {
 function joinPath(dir: string, name: string): string {
   if (dir === '.') return `./${name}`
   return dir.endsWith('/') ? dir + name : `${dir}/${name}`
+}
+
+function fileIcon(entry: SftpFileEntry): string {
+  if (entry.isDir) return '📁'
+  const name = entry.name.toLowerCase()
+  if (/\.(tar|gz|tgz|zip|bz2|xz|7z|rar)$/.test(name)) return '🗜'
+  if (/\.(sh|bash|py|js|ts|pl|rb)$/.test(name)) return '📜'
+  if (/\.(png|jpe?g|gif|svg|ico|webp)$/.test(name)) return '🖼'
+  if (/\.(conf|cnf|ini|yaml|yml|toml|json|env|cfg)$/.test(name)) return '⚙️'
+  if (/\.(deb|rpm|dmg|exe|pkg|apk)$/.test(name)) return '📦'
+  if (/\.(sql|db|sqlite)$/.test(name)) return '🗄'
+  return '📄'
 }
 
 const QUICK_DIRS = [
@@ -50,6 +63,7 @@ export default function FilePanel({
   const [createValue, setCreateValue] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const [pathInput, setPathInput] = useState('.')
+  const [pendingRemove, setPendingRemove] = useState<SftpFileEntry | null>(null)
   const uploadInputRef = useRef<HTMLInputElement>(null)
 
   const refresh = useCallback(
@@ -109,16 +123,8 @@ export default function FilePanel({
     }
   }
 
-  const handleRemove = async (entry: SftpFileEntry): Promise<void> => {
-    const kind = entry.isDir ? '文件夹' : '文件'
-    if (!window.confirm(`确定删除${kind}「${entry.name}」吗？`)) return
-    setError(null)
-    try {
-      await api.sftp.remove(sessionId, joinPath(path, entry.name), entry.isDir)
-      refresh(path)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    }
+  const handleRemove = (entry: SftpFileEntry): void => {
+    setPendingRemove(entry)
   }
 
   const submitRename = async (oldName: string): Promise<void> => {
@@ -291,7 +297,7 @@ export default function FilePanel({
               else handleDownload(entry)
             }}
           >
-            <span className="fp-icon">{entry.isDir ? '📁' : '📄'}</span>
+            <span className="fp-icon">{fileIcon(entry)}</span>
             {renaming === entry.name ? (
               <input
                 className="fp-rename-input"
@@ -372,6 +378,26 @@ export default function FilePanel({
       )}
       {progress?.done && progress.error && (
         <div className="fp-error">传输失败：{progress.error}</div>
+      )}
+      {pendingRemove && (
+        <ConfirmModal
+          title={pendingRemove.isDir ? '删除文件夹' : '删除文件'}
+          message={`确定删除${pendingRemove.isDir ? '文件夹' : '文件'}「${pendingRemove.name}」吗？`}
+          danger
+          okText="删 除"
+          onOk={() => {
+            const entry = pendingRemove
+            setPendingRemove(null)
+            setError(null)
+            api.sftp
+              .remove(sessionId, joinPath(path, entry.name), entry.isDir)
+              .then(() => refresh(path))
+              .catch((e) =>
+                setError(e instanceof Error ? e.message : String(e))
+              )
+          }}
+          onCancel={() => setPendingRemove(null)}
+        />
       )}
     </div>
   )

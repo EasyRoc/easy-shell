@@ -383,13 +383,31 @@ textarea::placeholder {
 }
 
 .host-leaf {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 4px 8px;
   border-radius: 4px;
   color: var(--text-dim);
+  cursor: pointer;
+}
+
+.host-leaf .dot {
+  flex-shrink: 0;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+}
+
+.host-leaf .dot.closed {
+  background: var(--text-faint);
+}
+
+.host-leaf .leaf-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
 }
 
 .host-leaf:hover {
@@ -1445,4 +1463,169 @@ tbody tr:hover {
   height: 1px;
   background: var(--border);
   margin: 5px 7px;
+}
+
+/* ---------- 全局 toast ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 34px;
+  transform: translateX(-50%);
+  background: var(--bg-strong);
+  color: var(--text);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  z-index: 300;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  animation: toast-in 0.18s ease-out;
+  pointer-events: none;
+  max-width: 70vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* ---------- 确认弹窗 ---------- */
+.confirm-modal {
+  width: 360px;
+  max-width: 90vw;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.confirm-message {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.btn.danger-solid {
+  background: var(--red);
+  color: #fff;
+}
+
+.btn.danger-solid:hover {
+  filter: brightness(0.92);
+}
+
+/* ---------- 设置面板 ---------- */
+.settings-panel {
+  width: 228px;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  color: var(--text);
+}
+
+.settings-row select {
+  padding: 3px 6px;
+  font-size: 12px;
+  width: 100px;
+}
+
+.settings-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-stepper button {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--bg-active);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-stepper button:hover:not(:disabled) {
+  background: var(--bg-strong);
+}
+
+.settings-stepper button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.settings-stepper span {
+  min-width: 20px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-hint {
+  padding: 4px 8px 2px;
+  font-size: 11px;
+  color: var(--text-faint);
+  line-height: 1.4;
+}
+
+/* ---------- 延迟列 ---------- */
+.test-all-btn {
+  margin-left: 6px;
+}
+
+.test-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.latency.saved {
+  color: var(--text-dim);
+}
+
+/* ---------- 操作列 hover 浮现 ---------- */
+.row-actions {
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+tr:hover .row-actions,
+tr:focus-within .row-actions {
+  opacity: 1;
+}
+
+/* ---------- 终端重连覆盖层 ---------- */
+.term-reconnect {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: var(--term-bg);
+  z-index: 3;
+  color: var(--text-dim);
+  font-size: 13px;
 }

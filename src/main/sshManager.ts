@@ -66,7 +66,7 @@ function destroyPool(connectionId: string): void {
     if (s?.stream) {
       s.stream.removeAllListeners('close')
       try {
-        s.stream.close()
+        ;(s.stream as unknown as { close: () => void }).close()
       } catch {
         /* ignore */
       }
@@ -214,7 +214,7 @@ export function disconnect(sessionId: string): void {
   if (s.stream) {
     s.stream.removeAllListeners('close')
     try {
-      s.stream.close()
+      ;(s.stream as unknown as { close: () => void }).close()
     } catch {
       /* ignore */
     }

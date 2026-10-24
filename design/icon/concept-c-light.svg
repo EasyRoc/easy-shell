@@ -1,0 +1,21 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgC" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e9e9ee"/>
+    </linearGradient>
+    <linearGradient id="grnC" gradientUnits="userSpaceOnUse" x1="0" y1="314" x2="0" y2="754">
+      <stop offset="0" stop-color="#35c95c"/>
+      <stop offset="1" stop-color="#1c9c41"/>
+    </linearGradient>
+    <filter id="shC" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#1a5c2e" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bgC)"/>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="184.5" fill="none" stroke="#000000" stroke-opacity="0.08" stroke-width="3"/>
+  <g filter="url(#shC)" stroke="url(#grnC)" stroke-width="68" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <polyline points="319,348 497,516 319,684"/>
+    <line x1="557" y1="684" x2="705" y2="684"/>
+  </g>
+</svg>

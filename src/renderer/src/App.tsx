@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SSHConnection, ConnectionGroup } from '../../shared/types'
 import { api } from './api'
 import Sidebar from './components/Sidebar'
 import HostTable from './components/HostTable'
 import HostEditModal from './components/HostEditModal'
 import PromptModal from './components/PromptModal'
+import ConfirmModal from './components/ConfirmModal'
 import TerminalView, { TermSession } from './components/TerminalView'
-import ThemePanel from './components/ThemePanel'
+import SettingsPanel from './components/SettingsPanel'
 
 export type GroupFilter = 'all' | 'favorite' | 'recent' | string
 
@@ -19,7 +20,11 @@ export default function App(): JSX.Element {
   const [activeSession, setActiveSession] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'terminal'>('list')
   const [showGroupPrompt, setShowGroupPrompt] = useState(false)
-  const [showThemePanel, setShowThemePanel] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [pendingRemoveConn, setPendingRemoveConn] = useState<SSHConnection | null>(null)
+  const [pendingRemoveGroup, setPendingRemoveGroup] = useState<ConnectionGroup | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimer = useRef<number | undefined>(undefined)
 
   const reload = useCallback(async () => {
     const [conns, grps] = await Promise.all([
@@ -45,6 +50,12 @@ export default function App(): JSX.Element {
     document.documentElement.dataset.platform = api.platform
   }, [])
 
+  const showToast = useCallback((msg: string): void => {
+    setToast(msg)
+    window.clearTimeout(toastTimer.current)
+    toastTimer.current = window.setTimeout(() => setToast(null), 1800)
+  }, [])
+
   // ---------- 连接管理 ----------
   const handleSave = async (
     data: Omit<SSHConnection, 'id' | 'createdAt'>,
@@ -60,9 +71,7 @@ export default function App(): JSX.Element {
   }
 
   const handleRemove = async (conn: SSHConnection): Promise<void> => {
-    if (!window.confirm(`确定删除连接「${conn.name}」吗？`)) return
-    await api.connections.remove(conn.id)
-    reload()
+    setPendingRemoveConn(conn)
   }
 
   const handleToggleFav = async (conn: SSHConnection): Promise<void> => {
@@ -79,11 +88,8 @@ export default function App(): JSX.Element {
 
   const handleRemoveGroup = async (id: string): Promise<void> => {
     const g = groups.find((x) => x.id === id)
-    if (!window.confirm(`确定删除分组「${g?.name}」吗？组内连接会移到未分组。`))
-      return
-    await api.groups.remove(id)
-    if (filter === id) setFilter('all')
-    reload()
+    if (!g) return
+    setPendingRemoveGroup(g)
   }
 
   // ---------- 打开终端 ----------
@@ -105,6 +111,17 @@ export default function App(): JSX.Element {
     setSessions((prev) =>
       prev.map((s) => (s.key === key ? { ...s, status } : s))
     )
+  }
+
+  // 原位重连：用新 key 替换旧会话条目，标签位置保持不变
+  const handleReconnect = (key: string): void => {
+    const src = sessions.find((s) => s.key === key)
+    if (!src) return
+    const newKey = `${src.connectionId}-${Date.now()}`
+    const session: TermSession = { ...src, key: newKey, status: 'connecting' }
+    setSessions((prev) => prev.map((s) => (s.key === key ? session : s)))
+    setActiveSession(newKey)
+    void reload()
   }
 
   const handleCloseSession = (key: string): void => {
@@ -170,6 +187,12 @@ export default function App(): JSX.Element {
         )
       : filtered
 
+  const activeConnectionIds = new Set(
+    sessions
+      .filter((s) => s.status === 'connected' || s.status === 'connecting')
+      .map((s) => s.connectionId)
+  )
+
   return (
     <div className="app">
       <div
@@ -202,13 +225,13 @@ export default function App(): JSX.Element {
         <div className="theme-entry">
           <button
             className="icon-btn"
-            title="主题"
-            onClick={() => setShowThemePanel((v) => !v)}
+            title="设置"
+            onClick={() => setShowSettings((v) => !v)}
           >
-            ⚙
+            🎨
           </button>
-          {showThemePanel && (
-            <ThemePanel onClose={() => setShowThemePanel(false)} />
+          {showSettings && (
+            <SettingsPanel onClose={() => setShowSettings(false)} />
           )}
         </div>
       </div>
@@ -220,7 +243,9 @@ export default function App(): JSX.Element {
           groups={groups}
           connections={connections}
           filter={filter}
+          activeConnectionIds={activeConnectionIds}
           onSelect={setFilter}
+          onConnect={handleConnect}
           onCreateGroup={() => setShowGroupPrompt(true)}
           onRemoveGroup={handleRemoveGroup}
           onNewConnection={() => setEditing('new')}
@@ -247,6 +272,7 @@ export default function App(): JSX.Element {
             onRemove={handleRemove}
             onToggleFav={handleToggleFav}
             onRefresh={reload}
+            onToast={showToast}
           />
         </div>
       </div>
@@ -262,6 +288,7 @@ export default function App(): JSX.Element {
             onClose={handleCloseSession}
             onBack={() => setView('list')}
             onStateChange={handleSessionState}
+            onReconnect={handleReconnect}
             onDuplicateKey={handleDuplicateSession}
             onCloseOthers={handleCloseOthers}
             onCloseAll={handleCloseAll}
@@ -284,6 +311,36 @@ export default function App(): JSX.Element {
           onCancel={() => setShowGroupPrompt(false)}
         />
       )}
+      {pendingRemoveConn && (
+        <ConfirmModal
+          title="删除连接"
+          message={`确定删除连接「${pendingRemoveConn.name || pendingRemoveConn.host}」吗？`}
+          danger
+          okText="删 除"
+          onOk={() => {
+            void api.connections.remove(pendingRemoveConn.id).then(reload)
+            setPendingRemoveConn(null)
+          }}
+          onCancel={() => setPendingRemoveConn(null)}
+        />
+      )}
+      {pendingRemoveGroup && (
+        <ConfirmModal
+          title="删除分组"
+          message={`确定删除分组「${pendingRemoveGroup.name}」吗？组内连接会移到未分组。`}
+          danger
+          okText="删 除"
+          onOk={() => {
+            void api.groups.remove(pendingRemoveGroup.id).then(() => {
+              if (filter === pendingRemoveGroup.id) setFilter('all')
+              reload()
+            })
+            setPendingRemoveGroup(null)
+          }}
+          onCancel={() => setPendingRemoveGroup(null)}
+        />
+      )}
+      {toast && <div className="toast">{toast}</div>}
     </div>
   )
 }

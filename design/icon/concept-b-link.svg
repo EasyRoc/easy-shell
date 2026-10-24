@@ -1,0 +1,27 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgB" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f2f35"/>
+      <stop offset="1" stop-color="#17171b"/>
+    </linearGradient>
+    <linearGradient id="grnB" gradientUnits="userSpaceOnUse" x1="0" y1="314" x2="0" y2="754">
+      <stop offset="0" stop-color="#82f294"/>
+      <stop offset="1" stop-color="#2ebd52"/>
+    </linearGradient>
+    <radialGradient id="glowB" cx="0.5" cy="0.46" r="0.62">
+      <stop offset="0" stop-color="#34c759" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#34c759" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shB" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bgB)"/>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="184.5" fill="none" stroke="#ffffff" stroke-opacity="0.09" stroke-width="3"/>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#glowB)"/>
+  <g filter="url(#shB)" stroke="url(#grnB)" stroke-width="68" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <polyline points="303,348 481,516 303,684"/>
+    <line x1="541" y1="684" x2="648" y2="684"/>
+  </g>
+  <circle cx="719" cy="684" r="37" fill="url(#grnB)" filter="url(#shB)"/>
+</svg>

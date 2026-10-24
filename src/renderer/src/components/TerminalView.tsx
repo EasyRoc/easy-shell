@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { api } from '../api'
 import { getCurrentTheme, useTheme } from '../theme'
+import { getSettings, subscribeSettings } from '../settings'
 import FilePanel from './FilePanel'
 import TabContextMenu from './TabContextMenu'
 
@@ -31,6 +32,7 @@ interface Props {
   onClose: (key: string) => void
   onBack: () => void
   onStateChange: (key: string, status: TermSession['status']) => void
+  onReconnect?: (key: string) => void
   onDuplicateKey?: (key: string) => string | null
   onCloseOthers?: (key: string) => void
   onCloseAll?: () => void
@@ -189,7 +191,7 @@ export default function TerminalView(props: Props): JSX.Element {
     <div className="terminal-page">
       <div className="term-tabs">
         <button className="back-btn" onClick={props.onBack}>
-          ← SSH
+          ← 连接列表
         </button>
         {props.sessions.map((s) => (
           <div
@@ -290,6 +292,17 @@ export default function TerminalView(props: Props): JSX.Element {
                     setSessionIds((prev) => ({ ...prev, [key]: id }))
                   }
                 />
+                {(s.status === 'closed' || s.status === 'error') && (
+                  <div className="term-reconnect">
+                    <span>{s.status === 'error' ? '连接失败' : '连接已断开'}</span>
+                    <button
+                      className="btn primary"
+                      onClick={() => props.onReconnect?.(s.key)}
+                    >
+                      重新连接
+                    </button>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -352,9 +365,11 @@ function TermBody(props: {
     const el = containerRef.current
     if (!el) return
 
+    const s = getSettings()
     const term = new Terminal({
       cursorBlink: true,
-      fontSize: 13,
+      fontSize: s.fontSize,
+      scrollback: s.scrollback,
       fontFamily: "'SF Mono', Menlo, Monaco, 'Courier New', monospace",
       theme: { ...getCurrentTheme().term }
     })
@@ -452,6 +467,27 @@ function TermBody(props: {
       termRef.current.options.theme = { ...theme.term }
     }
   }, [theme])
+
+  // 显示设置变更时实时应用字号/回滚行数
+  useEffect(() => {
+    const off = subscribeSettings(() => {
+      const term = termRef.current
+      const fit = fitRef.current
+      if (!term) return
+      const s = getSettings()
+      term.options.fontSize = s.fontSize
+      term.options.scrollback = s.scrollback
+      try {
+        fit?.fit()
+        if (sessionIdRef.current) {
+          api.ssh.resize(sessionIdRef.current, term.cols, term.rows)
+        }
+      } catch {
+        /* ignore */
+      }
+    })
+    return off
+  }, [])
 
   return (
     <div ref={containerRef} className="term-body" />

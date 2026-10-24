@@ -1,0 +1,26 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bgA" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f2f35"/>
+      <stop offset="1" stop-color="#17171b"/>
+    </linearGradient>
+    <linearGradient id="grnA" gradientUnits="userSpaceOnUse" x1="0" y1="314" x2="0" y2="754">
+      <stop offset="0" stop-color="#82f294"/>
+      <stop offset="1" stop-color="#2ebd52"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.5" cy="0.46" r="0.62">
+      <stop offset="0" stop-color="#34c759" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#34c759" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shA" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#bgA)"/>
+  <rect x="101.5" y="101.5" width="821" height="821" rx="184.5" fill="none" stroke="#ffffff" stroke-opacity="0.09" stroke-width="3"/>
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#glowA)"/>
+  <g filter="url(#shA)" stroke="url(#grnA)" stroke-width="68" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <polyline points="319,348 497,516 319,684"/>
+    <line x1="557" y1="684" x2="705" y2="684"/>
+  </g>
+</svg>

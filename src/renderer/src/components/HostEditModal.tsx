@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type {
   SSHConnection,
   ConnectionGroup,
@@ -35,6 +35,15 @@ export default function HostEditModal(props: Props): JSX.Element {
   const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(
     null
   )
+
+  // Esc 关闭弹窗（捕获阶段监听，避免被聚焦组件拦截）
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') props.onClose()
+    }
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
+  }, [props.onClose])
 
   const buildData = (): Omit<SSHConnection, 'id' | 'createdAt'> => ({
     name: name.trim(),

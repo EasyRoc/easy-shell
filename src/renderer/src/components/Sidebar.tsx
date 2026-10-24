@@ -5,14 +5,16 @@ interface Props {
   groups: ConnectionGroup[]
   connections: SSHConnection[]
   filter: GroupFilter
+  activeConnectionIds: Set<string>
   onSelect: (f: GroupFilter) => void
+  onConnect: (c: SSHConnection) => void
   onCreateGroup: () => void
   onRemoveGroup: (id: string) => void
   onNewConnection: () => void
 }
 
 export default function Sidebar(props: Props): JSX.Element {
-  const { groups, connections, filter, onSelect } = props
+  const { groups, connections, filter, activeConnectionIds, onSelect } = props
   const favCount = connections.filter((c) => c.favorite).length
   const recentCount = connections.filter((c) => c.lastConnectedAt).length
   const countOf = (gid: string): number =>
@@ -74,11 +76,20 @@ export default function Sidebar(props: Props): JSX.Element {
               <div className="group-children">
                 {connections
                   .filter((c) => c.groupId === g.id)
-                  .map((c) => (
-                    <div key={c.id} className="host-leaf">
-                      {c.name || c.host}
-                    </div>
-                  ))}
+                  .map((c) => {
+                    const online = activeConnectionIds.has(c.id)
+                    return (
+                      <div
+                        key={c.id}
+                        className="host-leaf"
+                        title={`连接 ${c.host}:${c.port}`}
+                        onClick={() => props.onConnect(c)}
+                      >
+                        <span className={`dot ${online ? '' : 'closed'}`} />
+                        <span className="leaf-name">{c.name || c.host}</span>
+                      </div>
+                    )
+                  })}
               </div>
             )}
           </div>

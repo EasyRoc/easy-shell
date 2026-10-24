@@ -18,6 +18,7 @@ export interface SSHConnection {
   heartbeat?: number // 毫秒
   favorite?: boolean
   lastConnectedAt?: number
+  lastLatency?: number | null // 最近一次测延迟结果（毫秒），null 表示上次失败/未测
   sysInfo?: {
     os: string        // 如 'Ubuntu 22.04'
     cpuCores: number  // 如 8

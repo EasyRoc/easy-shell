@@ -9,6 +9,7 @@ interface Props {
   onRemove: (c: SSHConnection) => void
   onToggleFav: (c: SSHConnection) => void
   onRefresh?: () => void
+  onToast?: (msg: string) => void
 }
 
 type LatencyState = Record<string, { ms?: number; fail?: boolean }>
@@ -27,6 +28,18 @@ export default function HostTable(props: Props): JSX.Element {
       [c.id]: r.ok ? { ms: r.latency } : { fail: true }
     }))
     setTesting((p) => ({ ...p, [c.id]: false }))
+    // 持久化延迟结果，切页/重启后仍可见
+    await api.connections.update(c.id, {
+      lastLatency: r.ok ? (r.latency ?? null) : null
+    })
+    props.onRefresh?.()
+  }
+
+  const testAll = async (): Promise<void> => {
+    for (const c of props.connections) {
+      if (testing[c.id]) continue
+      await testOne(c)
+    }
   }
 
   const refreshInfo = async (c: SSHConnection): Promise<void> => {
@@ -45,8 +58,12 @@ export default function HostTable(props: Props): JSX.Element {
   }
 
   const copyAddr = (c: SSHConnection): void => {
-    navigator.clipboard.writeText(`${c.username}@${c.host}:${c.port}`)
+    const addr = `${c.username}@${c.host}:${c.port}`
+    void navigator.clipboard.writeText(addr)
+    props.onToast?.(`已复制 ${addr}`)
   }
+
+  const anyTesting = props.connections.some((c) => testing[c.id])
 
   if (props.connections.length === 0) {
     return <div className="empty">暂无连接，点击左上角「+ SSH」新建一个吧</div>
@@ -58,16 +75,26 @@ export default function HostTable(props: Props): JSX.Element {
         <thead>
           <tr>
             <th style={{ width: 40 }}></th>
-            <th style={{ width: 110 }}>延迟</th>
+            <th style={{ width: 130 }}>
+              延迟
+              <button
+                className="link test-all-btn"
+                onClick={() => void testAll()}
+                disabled={anyTesting}
+              >
+                {anyTesting ? '测试中…' : '全部测试'}
+              </button>
+            </th>
             <th style={{ width: 220 }}>信息</th>
             <th>名称</th>
             <th>地址</th>
-            <th style={{ width: 220 }}>操作</th>
+            <th style={{ width: 168 }}>操作</th>
           </tr>
         </thead>
         <tbody>
           {props.connections.map((c) => {
             const l = latency[c.id]
+            const saved = l?.ms === undefined ? c.lastLatency : undefined
             return (
               <tr key={c.id} onDoubleClick={() => props.onConnect(c)}>
                 <td>
@@ -86,8 +113,12 @@ export default function HostTable(props: Props): JSX.Element {
                     <span className="latency fail">失败</span>
                   ) : l?.ms !== undefined ? (
                     <span className="latency">● {l.ms} ms</span>
+                  ) : saved != null ? (
+                    <span className="latency saved" title="上次测试结果">
+                      ● {saved} ms
+                    </span>
                   ) : (
-                    <button className="link" onClick={() => testOne(c)}>
+                    <button className="link" onClick={() => void testOne(c)}>
                       测延迟
                     </button>
                   )}
@@ -117,7 +148,7 @@ export default function HostTable(props: Props): JSX.Element {
                       className={`sys-info-refresh ${collecting[c.id] ? 'spinning' : ''}`}
                       title="刷新系统信息"
                       disabled={collecting[c.id]}
-                      onClick={() => refreshInfo(c)}
+                      onClick={() => void refreshInfo(c)}
                     >
                       ⟳
                     </button>
